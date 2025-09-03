@@ -98,3 +98,10 @@ bind_rows_match_classes <- function(dfs) {
 amc_updates_dir <- file.path(folder_path, "analysis_updates")
 
 if(!dir.exists(amc_updates_dir)){dir.create(amc_updates_dir, recursive = T)}
+
+#colors
+my_colors <- c(
+  brewer.pal(9, "Set1"),
+  brewer.pal(8, "Set2"),
+  brewer.pal(8, "Dark2")
+)

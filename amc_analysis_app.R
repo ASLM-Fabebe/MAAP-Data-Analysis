@@ -8,7 +8,7 @@ source("amc_scripts/f1.R")
 ui <- fluidPage(
   theme = shinytheme("cerulean"),
 
-  titlePanel("AMC Data Analysis - MAAP2"),
+  titlePanel("AMC Data Analysis - MAAP"),
 
   tabsetPanel(
     id = "steps",

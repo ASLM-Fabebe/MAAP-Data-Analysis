@@ -186,6 +186,50 @@ amc_r1 <- amc_test %>%
     uid=1:nrow(.)                                    #adding an identifer to sort out the mixed molecules
   )
 
+##taking care of date
+# Load AMC data sources ---------------------------------------------------
+
+safe_as_posix <- function(x, ...) {
+  out <- tryCatch(as.POSIXct(x, ...), error = function(e) NA)
+  out
+}
+
+amc_r1 <- amc_r1 %>%
+  mutate(
+    # pick source
+    date_new = date,
+
+    # numeric probe
+    .num = suppressWarnings(as.numeric(date_new)),
+
+    # smart parsing
+    .posix = dplyr::case_when(
+      inherits(date_new, "Date")    ~ safe_as_posix(date_new, tz = "UTC"),
+      inherits(date_new, "POSIXt")  ~ safe_as_posix(date_new, tz = "UTC"),
+
+      # numeric epochs
+      !is.na(.num) & .num > 1e12 ~ safe_as_posix(.num/1000, origin = "1970-01-01", tz = "UTC"), # ms
+      !is.na(.num) & .num > 1e9  ~ safe_as_posix(.num,      origin = "1970-01-01", tz = "UTC"), # sec
+
+      # Excel serial days
+      !is.na(.num) ~ safe_as_posix(.num * 86400, origin = excel_origin, tz = "UTC"),
+
+      # fallback to parsing strings
+      TRUE ~ tryCatch(
+        suppressWarnings(parse_date_time(as.character(date_new),
+                                         orders = date_parse_vec, tz = "UTC")),
+        error = function(e) NA
+      )
+    ),
+
+    date = as.Date(.posix),
+
+    # flag failures
+    parse_failed = is.na(.posix) & !is.na(date_new),
+    parse_failed_value = ifelse(parse_failed, as.character(date_new), NA_character_),
+
+  ) %>%
+  select(-.num, -.posix)
 
 # Determining the max number of parts after splitting
 max_parts <- max(str_count(amc_r1$antibiotic_copy, "_s_"), na.rm = T) + 1

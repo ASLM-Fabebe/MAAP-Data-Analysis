@@ -10,6 +10,7 @@ if (!require("pacman", quietly = TRUE)){
 
 pacman::p_load(
   AMR,
+  parallel,
   tidyverse,
   readxl,
   remotes,

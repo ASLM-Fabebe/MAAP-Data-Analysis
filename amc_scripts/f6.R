@@ -66,12 +66,7 @@ amc_cats_aware <- amc %>% left_join(amc_class_updates, by=('antibiotic_names')) 
 
 #for (y in unique(amc_cats_class$year)) {
 
-#colors
-my_colors <- c(
-  brewer.pal(9, "Set1"),
-  brewer.pal(8, "Set2"),
-  brewer.pal(8, "Dark2")
-)
+
 
 plt_class_dist <- ggplot(amc_cats_class #%>% filter(year==y)
                          , aes(x=as.factor(year), y=ddd_dist, fill=class))+
