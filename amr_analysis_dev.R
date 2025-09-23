@@ -56,68 +56,133 @@ ui <- fluidPage(
                  downloadButton("download_1", "Save Data"),
                  helpText(paste0("Save in ", amr_updates_dir,"/")),
 
-                 br(),br(), br(),
-                 checkboxInput("data_format_long", "My dataset have antibiotics in one column"),
-                 helpText(paste0("Leave blank if antibiotics form multiple columns in the dataset")),
+                 br(),
 
-                 conditionalPanel(
-                   condition = "input.data_format_long == true",
-                   rHandsontableOutput("table_2"),
-                   downloadButton("download_2", "Save Parameters"),
-                   helpText(paste0("Save in ", amr_updates_dir,"/"))
-                 ),
-                 br(), br(), br(),
 
-                 actionButton("run_script_1", "Begin analysis"),
-                 br(), br(), br(),
-                 verbatimTextOutput("console_1"),
+
+
+                 #actionButton("run_script_1b", "Update Patient location type options"),
+                 #br(), br(), br(),
+                 #verbatimTextOutput("console_1b"),
+
 
                  checkboxInput("completed_1", "I have completed this step"),
-                 br()
+                 br(),
+
+                 # Bottom-right: Next
+                 fixedPanel(
+                   actionButton("next_1", "Next"),
+                   bottom = 10, right = 10, width = "auto"
+                 )
+
                )
              )
+    ),
+    # Step 2
+    tabPanel("Step 2",
+             checkboxInput("data_format_long", "My dataset have antibiotics in one column"),
+             helpText(paste0("Leave blank if antibiotics form multiple columns in the dataset")),
+
+             conditionalPanel(
+               condition = "input.data_format_long == true",
+               rHandsontableOutput("table_2"),
+               downloadButton("download_2", "Save Parameters"),
+               helpText(paste0("Save in ", amr_updates_dir,"/"))
+             ),
+             br(), br(), br(),
+
+             checkboxInput("completed_2", "I have completed this step"),
+             # Bottom-left: Previous
+             fixedPanel(
+               actionButton("prev_2", "Previous"),
+               bottom = 10, left = 10, width = "auto"
+             ),
+
+             # Bottom-right: Next
+             fixedPanel(
+               actionButton("next_2", "Next"),
+               bottom = 10, right = 10, width = "auto"
+             )
+    ),
+
+    #step_3
+    tabPanel("Step 3",
+             h4("SIR interpretations"),
+
+             actionButton("run_script_3", "SIR Interpretations and Look up tables"),
+             br(), br(),
+             verbatimTextOutput("console_3"),
+             br(),
+             #checkboxInput("sir", "SIR interpretations complete"),
+             #br(),
+
+             br(),br(), br(),
+             checkboxInput("completed_3", "I have completed this step"),
+
+             # Bottom-left: Previous
+             fixedPanel(
+               actionButton("prev_3", "Previous"),
+               bottom = 10, left = 10, width = "auto"
+             ),
+
+             # Bottom-right: Next
+             fixedPanel(
+               actionButton("next_3", "Next"),
+               bottom = 10, right = 10, width = "auto"
+             )
+    ),
+
+    #Step4
+    tabPanel("Step 4",
+             #run script 1b
+             h4("Update patient location entries and Begin Analysis"),
+             rHandsontableOutput("table_4"),
+             br(),
+
+             downloadButton("download_4", "Save Data"),
+             helpText(paste0("Save in ", amr_updates_dir,"/")),
+
+             actionButton("run_script_4", "Begin analysis"),
+             br(), br(), br(),
+             verbatimTextOutput("console_4"),
+
+             verbatimTextOutput("console_4"),
+
+             checkboxInput("completed_4", "I have completed this step"),
+             # Bottom-left: Previous
+             fixedPanel(
+               actionButton("prev_4", "Previous"),
+               bottom = 10, left = 10, width = "auto"
+             ),
+
+             # Bottom-right: Next
+             fixedPanel(
+               actionButton("next_4", "Next"),
+               bottom = 10, right = 10, width = "auto"
+             )
+    ),
+    #step_4
+    tabPanel("Step 5",
+             h4("GLASS specimen and analysis"),
+
+             rHandsontableOutput("table_5"),
+             br(),
+             downloadButton("download_5", "Save Data"),
+             helpText(paste0("Save in ", amr_updates_dir,"/")),
+
+             br(),br(),
+             actionButton("run_script_5", "Begin analysis for WHO GLASS combos"),
+             br(),br(), br(),
+             verbatimTextOutput("console_5"),
+
+             checkboxInput("completed_5", "I have completed this step"),
+             # Bottom-left: Previous
+             fixedPanel(
+               actionButton("prev_5", "Previous"),
+               bottom = 10, left = 10, width = "auto"
+             )
     )
-
-#,
-
-    # # Step 2
-    # tabPanel("Step 2",
-    #          h3("Begin Analysis"),
     #
-    #          rHandsontableOutput("table_2"),
-    #          br(),
-    #          downloadButton("download_2", "Save Data"),
-    #         # helpText(paste0("Save in ", amc_updates_dir,"/")),
-    #
-    #          br(),br(),
-    #          actionButton("run_script_2", "Cleanup AMC dataset"),
-    #          br(),br(), br(),
-    #          verbatimTextOutput("console_2"),
-    #          actionButton("prev_2", "Previous"),
-    #          checkboxInput("completed_2", "I have completed this step"),
-    #          actionButton("next_2", "Next")
-    # )#,
-#
-#     # Step 3
-#     tabPanel("Step 3",
-#              h3("Updated DDD Information"),
-#
-#              rHandsontableOutput("table_3"),
-#              br(),
-#              downloadButton("download_3", "Save Data"),
-#              helpText(paste0("Save in ", amc_updates_dir,"/")),
-#
-#              br(),br(),
-#              actionButton("run_script_3", "Subset the ineligible data"),
-#              br(),br(),
-#              verbatimTextOutput("console_3"),
-#
-#              actionButton("prev_3", "Previous"),
-#              checkboxInput("completed_3", "I have completed this step"),
-#              actionButton("next_3", "Next")
-#     ),
-
-#
     # # Step 6
     # tabPanel("Step 6",
     #          h3("Step 6"),
@@ -168,6 +233,7 @@ server <- function(input, output, session) {
   step1_data <- reactiveVal(initial_df)
   step2_data <- reactiveVal(long_df_cols)
   step3_data <- reactiveVal(NULL)
+
   step4_data <- reactiveVal(NULL)
   step5_data <- reactiveVal(NULL)
   step6_data <- reactiveVal(NULL)
@@ -189,14 +255,14 @@ server <- function(input, output, session) {
   observeEvent(input$reg_1, {
     req(input$country_name)
 
-       # Save to global environment
+    # Save to global environment
     assign("cntry", input$country_name, envir = .GlobalEnv)
     #assign("pop", input$population, envir = .GlobalEnv)
 
     # Feedback to user
     output$register_msg <- renderText({
       paste0("✅ R Country Successfully Registered: ", input$country_name)
-     })
+    })
   })
 
   #operatin system for antibiograms
@@ -213,19 +279,20 @@ server <- function(input, output, session) {
   })
 
   observe({ req(input$table_1); step1_data(hot_to_r(input$table_1)) })
-  observeEvent(input$run_script_1, {
-    df <- step1_data()
-    script_file <- "amr_scripts/f2.R"
-    if(file.exists(script_file)) {
-      msg <- capture.output(tryCatch(source(script_file, local = .GlobalEnv),
-                                     error = function(e) cat("Error:", e$message)), type = "output")
-      step_logs[[1]](paste(msg, collapse="\n"))
-    } else step_logs[[1]]("No script found for Step 1")
-    step1_data(df)
-  })
-  output$console_1 <- renderText({ step_logs[[1]]() })
+
   output$download_1 <- downloadHandler(filename = "select_amr_variables.xlsx",
                                        content = function(file) writexl::write_xlsx(step1_data(), file))
+
+
+
+  ##Step 2
+
+  observeEvent(input$next_1, {
+    if(isTRUE(input$completed_1)) {
+      updateTabsetPanel(session, "steps", "Step 2")
+      step2_data()  # Load only now
+    }
+  })
 
   observeEvent(input$data_format_long, {
     if (isTRUE(input$data_format_long)) {
@@ -240,7 +307,7 @@ server <- function(input, output, session) {
     } else {
       output$table_2 <- renderRHandsontable(NULL)  # clear when unchecked
     }
-      })
+  })
 
   # Capture user edits from rhandsontable
   observe({
@@ -250,39 +317,109 @@ server <- function(input, output, session) {
   })
 
   output$download_2 <- downloadHandler(filename = "long_format_amr_columns.xlsx",
-                                       content = function(file) writexl::write_xlsx(step2_data(), file))
+                                       content = function(file) writexl::write_xlsx(step3_data(), file))
+
+  #Step 3
+  observeEvent(input$next_2, {
+    if(isTRUE(input$completed_2)) {
+      updateTabsetPanel(session, "steps", "Step 3")
+      step3_data()  # Load only now
+    }
+  })
+
+  observeEvent(input$run_script_3, {
+    df <- step3_data()
+    script_file <- "amr_scripts/f2.R"
+    if(file.exists(script_file)) {
+      msg <- capture.output(tryCatch(source(script_file, local = .GlobalEnv),
+                                     error = function(e) cat("Error:", e$message)), type = "output")
+      step_logs[[3]](paste(msg, collapse="\n"))
+    } else step_logs[[3]]("No script found for Step 3")
+    step3_data(df)
+  })
+  output$console_3 <- renderText({ step_logs[[3]]() })
 
 
-  # # ---- Step 2 lazy-load ----
-  # observeEvent(input$next_1, {
-  #   if(isTRUE(input$completed_1)) {
-  #     updateTabsetPanel(session, "steps", "Step 2")
-  #     # Load step2 data only now
-  #     step2_data(lookup_df[,-3])
-  #   }
-  # })
-  # output$table_2 <- renderRHandsontable({
-  #   df <- step2_data()
-  #   req(df)
-  #   rhandsontable(df) %>%
-  #     hot_col("Verdict", type = "dropdown", source = c('','Correct', 'I have edited'), width = 150) %>%
-  #     hot_col("original_entry", readOnly = TRUE, width = 300)  # Optional: Make label column readonly
-  # })
-  # observe({ req(input$table_2); step2_data(hot_to_r(input$table_2)) })
-  # observeEvent(input$run_script_2, {
-  #   df <- step2_data()
-  #   script_file <- "amc_scripts/f3.R"
-  #   if(file.exists(script_file)) {
-  #     msg <- capture.output(tryCatch(source(script_file, local = .GlobalEnv),
-  #                                    error = function(e) cat("Error:", e$message)), type = "output")
-  #     step_logs[[2]](paste(msg, collapse="\n"))
-  #   } else step_logs[[2]]("No script found for Step 2")
-  #   step2_data(df)
-  # })
-  # output$console_2 <- renderText({ step_logs[[2]]() })
-  # output$download_2 <- downloadHandler(filename = "matching_unclear_antibiotic_entries.xlsx",
-  #                                      content = function(file) writexl::write_xlsx(step2_data(), file))
-  #
+
+
+  #Step 4
+  ##the spec data
+
+  observeEvent(input$next_3, {
+    if(isTRUE(input$completed_3)) {
+      updateTabsetPanel(session, "steps", "Step 4")
+      step4_data(loc_options)  # Load only now
+    }
+  })
+
+
+  output$table_4 <- renderRHandsontable({
+    df <- step4_data()
+    req(df)
+    rhandsontable(df) %>%
+      hot_col("my_dataset", readOnly = TRUE, width = 200) %>%
+      hot_col("options", type = "dropdown", source = c(loc_opts,'Not available'), width = 200)
+  })
+
+
+  # Capture user edits from rhandsontable
+  observe({
+    if (!is.null(input$table_4)) {
+      step4_data(hot_to_r(input$table_4))
+    }
+  })
+
+  output$download_4 <- downloadHandler(filename = "patient_location_type.xlsx",
+                                       content = function(file) writexl::write_xlsx(step4_data(), file))
+
+
+  observeEvent(input$run_script_4, {
+    df <- step4_data()
+    script_file <- "amr_scripts/f2a.R"
+    if(file.exists(script_file)) {
+      msg <- capture.output(tryCatch(source(script_file, local = .GlobalEnv),
+                                     error = function(e) cat("Error:", e$message)), type = "output")
+      step_logs[[4]](paste(msg, collapse="\n"))
+    } else step_logs[[4]]("No script found for Step 4")
+    step3_data(df)
+  })
+  output$console_4 <- renderText({ step_logs[[4]]() })
+
+
+
+
+
+  # # ---- Step 5 lazy-load ----
+  observeEvent(input$next_4, {
+    if(isTRUE(input$completed_4)) {
+      updateTabsetPanel(session, "steps", "Step 5")
+      #Load step2 data only now
+      step5_data(specimen_check_df)
+    }
+  })
+  output$table_5 <- renderRHandsontable({
+    df <- step5_data()
+    req(df)
+    rhandsontable(df) %>%
+      hot_col("matched", type = "dropdown", source = c(sort(unique(glass_opts$specimen)),''), width = 150) %>%
+      hot_col("my_dataset", readOnly = TRUE, width = 300)  # Optional: Make label column readonly
+  })
+  observe({ req(input$table_5); step5_data(hot_to_r(input$table_5)) })
+  observeEvent(input$run_script_5, {
+    df <- step5_data()
+    script_file <- "amr_scripts/f3.R"  #bring in the corrections and do the conversions
+    if(file.exists(script_file)) {
+      msg <- capture.output(tryCatch(source(script_file, local = .GlobalEnv),
+                                     error = function(e) cat("Error:", e$message)), type = "output")
+      step_logs[[5]](paste(msg, collapse="\n"))
+    } else step_logs[[5]]("No script found for Step 5")
+    step5_data(df)
+  })
+  output$console_5 <- renderText({ step_logs[[5]]() })
+  output$download_5 <- downloadHandler(filename = "matching_GLASS_specimen_types.xlsx",
+                                       content = function(file) writexl::write_xlsx(step5_data(), file))
+
+
   #
   # # ---- Step 3 lazy-load ----
   # observeEvent(input$next_2, {
@@ -374,7 +511,7 @@ server <- function(input, output, session) {
 
   # Repeat for Step 3 to Step 8: lazy-load dataset only when next button is clicked
   #observeEvent(input$next_2, { if(isTRUE(input$completed_2)) { updateTabsetPanel(session, "steps", "Step 3"); step3_data(head(airquality,5)) }})
- # observeEvent(input$next_3, { if(isTRUE(input$completed_3)) { updateTabsetPanel(session, "steps", "Step 4"); step4_data(head(PlantGrowth,5)) }})
+  # observeEvent(input$next_3, { if(isTRUE(input$completed_3)) { updateTabsetPanel(session, "steps", "Step 4"); step4_data(head(PlantGrowth,5)) }})
 
 
   # Previous buttons

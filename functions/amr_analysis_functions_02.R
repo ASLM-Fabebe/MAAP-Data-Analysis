@@ -110,7 +110,7 @@ get_inputs_and_prelim_cleanup <- function(){
 
        r_id = row_number()
      ) %>%
-     select(-.num, -.posix)
+     dplyr::select(-.num, -.posix)
 
 
 
@@ -157,13 +157,15 @@ get_facilities_data <- function(df){
 
   facility_vec <- c("r_id","Identification number","Laboratory","Institution",
 
-                    "Location","Location type","Department","Origin","Country")
+                    "Patient Location Type","Location type","Department","Origin","Country",
+
+                    "Identification number", "Laboratory Name", "Patient Department")
 
   lkp_facility <- df %>%
 
     dplyr::select(any_of(facility_vec)) %>%
 
-    dplyr::select(where(~ !all(is.na(.))))  # remove columns with no values
+    #dplyr::select(where(~ !all(is.na(.))))  # remove columns with no values
 
   return(lkp_facility)
 }
