@@ -40,13 +40,13 @@ _Provide minimal reproducible steps:_
 
 **Acceptance Criteria** 
 Example - Replace with your specific scenario
-'''gherkin
+```gherkin
 Given I have AMR data loaded in the correct format
 When I run the analysis with standard parameters
 Then the analysis completes without errors
 And I receive the expected output files in the results folder
 And all visualizations render correctly
-'''
+```
 
 
 **Error Details**  
