@@ -1,0 +1,28 @@
+name: Validate Issue Templates
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for Gherkin Acceptance Criteria
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const hasGherkin = issue.body.includes('```
+                              issue.body.includes('Given') && 
+                              issue.body.includes('When') && 
+                              issue.body.includes('Then');
+            
+            if (!hasGherkin && !issue.labels.some(label => label.name === 'documentation')) {
+              github.rest.issues.createComment({
+                issue_number: issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '⚠️ This issue appears to be missing Gherkin acceptance criteria. Please add Given/When/Then scenarios to help define clear success criteria.'
+              });
+            }

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Setup Documentation
+    url: https://github.com/ASLM-Fabebe/MAAP-Data-Analysis#readme
+    about: Check installation and analysis guides before reporting issues
+  - name: 🧬 AMR Package Help
+    url: https://msberends.github.io/AMR/
+    about: R AMR package documentation and examples
+  - name: 📝 Gherkin Guide
+    url: https://cucumber.io/docs/gherkin/reference/
+    about: Learn Gherkin syntax for writing acceptance criteria
