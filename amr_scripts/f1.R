@@ -15,7 +15,8 @@ if (rstudioapi::isAvailable()) {
 
 input_file <- list.files(folder_path, pattern = "^AMR.*.xlsx")
 
-amr <- readxl::read_excel(file.path(folder_path,input_file))
+amr <- readxl::read_excel(file.path(folder_path,input_file), guess_max = 21474836) %>%
+  dplyr::select(where(~ any(!is.na(.))))#drop all empty columns
 
 # Replace missing dates with dates e.g. from registration date col --------
 excel_origin = "1899-12-30"

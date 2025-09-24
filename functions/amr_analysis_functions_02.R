@@ -120,10 +120,13 @@ get_inputs_and_prelim_cleanup <- function(){
 
                "Specimen type" , # type of specimemn
 
-               "Organism",      # organism identified
-               "specimen_date_cleaned") #date of collection
+               "Organism"      # organism identified
+               ) #date of collection
 
   # Remove columns with NA values in any of the mandatory columns
+
+    #fill_function
+
 
   amr <- amr %>%
 
