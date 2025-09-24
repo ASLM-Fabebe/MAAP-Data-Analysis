@@ -24,9 +24,18 @@ an_glass_df_2 <- an_df_long %>%  mutate(rec_combo=paste0(as.mo(genus),specimen_t
   filter(rec_combo %in% glass_opts$rec_combo) %>%
   mutate(mo_organism=genus)
 
-an_glass_df <- rbind(an_glass_df_1,an_glass_df_2) %>%
-  left_join(glass_opts %>% dplyr::select(antibiotic,antibiotic_class_glass ) %>% distinct(), by=c('ab'='antibiotic')) %>%
-  mutate(ab_class=antibiotic_class_glass) %>%
+an_glass_df_pre <- rbind(an_glass_df_1,an_glass_df_2) %>%
+  mutate(ab = trimws(as.character(ab))) %>%
+  distinct()
+
+glass_opts_join <- glass_opts %>%
+  dplyr::select(antibiotic,antibiotic_class_glass) %>%
+  distinct() %>%
+  mutate(antibiotic = trimws(as.character(antibiotic)))
+
+an_glass_df <- an_glass_df_pre %>%
+  left_join(glass_opts_join, by = c('ab' = 'antibiotic')) %>%
+  mutate(ab_class = antibiotic_class_glass) %>%
   distinct()
 
 
