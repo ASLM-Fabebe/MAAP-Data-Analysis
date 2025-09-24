@@ -53,8 +53,9 @@ ui <- fluidPage(
 
                  rHandsontableOutput("table_1"),
                  br(),
-                 downloadButton("download_1", "Save Data"),
-                 helpText(paste0("Save in ", amr_updates_dir,"/")),
+                actionButton("save_1", "Save Data"),
+                helpText(paste0("Save in ", amr_updates_dir,"/")),
+                textOutput("save_msg_1"),
 
                  br(),
 
@@ -85,9 +86,10 @@ ui <- fluidPage(
 
              conditionalPanel(
                condition = "input.data_format_long == true",
-               rHandsontableOutput("table_2"),
-               downloadButton("download_2", "Save Parameters"),
-               helpText(paste0("Save in ", amr_updates_dir,"/"))
+              rHandsontableOutput("table_2"),
+              actionButton("save_2", "Save Parameters"),
+              helpText(paste0("Save in ", amr_updates_dir,"/")),
+              textOutput("save_msg_2")
              ),
              br(), br(), br(),
 
@@ -141,8 +143,9 @@ ui <- fluidPage(
              rHandsontableOutput("table_4"),
              br(),
 
-             downloadButton("download_4", "Save Data"),
-             helpText(paste0("Save in ", amr_updates_dir,"/")),
+            actionButton("save_4", "Save Data"),
+            helpText(paste0("Save in ", amr_updates_dir,"/")),
+            textOutput("save_msg_4"),
 
              actionButton("run_script_4", "Begin analysis"),
              br(), br(), br(),
@@ -170,8 +173,9 @@ ui <- fluidPage(
 
              rHandsontableOutput("table_5"),
              br(),
-             downloadButton("download_5", "Save Data"),
-             helpText(paste0("Save in ", amr_updates_dir,"/")),
+            actionButton("save_5", "Save Data"),
+            helpText(paste0("Save in ", amr_updates_dir,"/")),
+            textOutput("save_msg_5"),
 
              br(),br(),
              actionButton("run_script_5", "Begin analysis for WHO GLASS combos"),
@@ -246,6 +250,19 @@ server <- function(input, output, session) {
   # Step logs
   step_logs <- lapply(1:8, function(i) reactiveVal(""))
 
+  # Auto-detect OS and preselect
+  session$onFlushed(function() {
+    sysname <- tryCatch(Sys.info()[["sysname"]], error = function(e) NULL)
+    detected_os <- switch(sysname,
+                          Windows = "Windows",
+                          Darwin = "Mac",
+                          Linux = "Linux",
+                          "Other")
+    updateSelectInput(session, "os_type", selected = detected_os)
+    assign("user_os", detected_os, envir = .GlobalEnv)
+    output$os_msg <- renderText({ paste0("✅ Operating System Selected: ", detected_os, " (auto-detected)") })
+  }, once = TRUE)
+
   # ---- Step 1 ----
   output$table_1 <- renderRHandsontable({
     df <- step1_data()
@@ -283,8 +300,17 @@ server <- function(input, output, session) {
 
   observe({ req(input$table_1); step1_data(hot_to_r(input$table_1)) })
 
-  output$download_1 <- downloadHandler(filename = "select_amr_variables.xlsx",
-                                       content = function(file) writexl::write_xlsx(step1_data(), file))
+  observeEvent(input$save_1, {
+    out_dir <- amr_updates_dir
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+    out_file <- file.path(out_dir, "select_amr_variables.xlsx")
+    tryCatch({
+      writexl::write_xlsx(step1_data(), out_file)
+      output$save_msg_1 <- renderText({ paste0("✅ Saved to ", out_file) })
+    }, error = function(e) {
+      output$save_msg_1 <- renderText({ paste0("❌ Save failed: ", e$message) })
+    })
+  })
 
 
 
@@ -319,8 +345,17 @@ server <- function(input, output, session) {
     }
   })
 
-  output$download_2 <- downloadHandler(filename = "long_format_amr_columns.xlsx",
-                                       content = function(file) writexl::write_xlsx(step3_data(), file))
+  observeEvent(input$save_2, {
+    out_dir <- amr_updates_dir
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+    out_file <- file.path(out_dir, "long_format_amr_columns.xlsx")
+    tryCatch({
+      writexl::write_xlsx(step2_data(), out_file)
+      output$save_msg_2 <- renderText({ paste0("✅ Saved to ", out_file) })
+    }, error = function(e) {
+      output$save_msg_2 <- renderText({ paste0("❌ Save failed: ", e$message) })
+    })
+  })
 
   #Step 3
   observeEvent(input$next_2, {
@@ -372,8 +407,17 @@ server <- function(input, output, session) {
     }
   })
 
-  output$download_4 <- downloadHandler(filename = "patient_location_type.xlsx",
-                                       content = function(file) writexl::write_xlsx(step4_data(), file))
+  observeEvent(input$save_4, {
+    out_dir <- amr_updates_dir
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+    out_file <- file.path(out_dir, "patient_location_type.xlsx")
+    tryCatch({
+      writexl::write_xlsx(step4_data(), out_file)
+      output$save_msg_4 <- renderText({ paste0("✅ Saved to ", out_file) })
+    }, error = function(e) {
+      output$save_msg_4 <- renderText({ paste0("❌ Save failed: ", e$message) })
+    })
+  })
 
 
   observeEvent(input$run_script_4, {
@@ -419,8 +463,17 @@ server <- function(input, output, session) {
     step5_data(df)
   })
   output$console_5 <- renderText({ step_logs[[5]]() })
-  output$download_5 <- downloadHandler(filename = "matching_GLASS_specimen_types.xlsx",
-                                       content = function(file) writexl::write_xlsx(step5_data(), file))
+  observeEvent(input$save_5, {
+    out_dir <- amr_updates_dir
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+    out_file <- file.path(out_dir, "matching_GLASS_specimen_types.xlsx")
+    tryCatch({
+      writexl::write_xlsx(step5_data(), out_file)
+      output$save_msg_5 <- renderText({ paste0("✅ Saved to ", out_file) })
+    }, error = function(e) {
+      output$save_msg_5 <- renderText({ paste0("❌ Save failed: ", e$message) })
+    })
+  })
 
 
   #
