@@ -37,7 +37,13 @@ ui <- fluidPage(
 
              checkboxInput("completed_1", "I have completed this step"),
              br(),
-             actionButton("next_1", "Next")
+             # Bottom-left: Previous
+
+             # Bottom-right: Next
+             fixedPanel(
+               actionButton("next_1", "Next"),
+               bottom = 10, right = 10, width = "auto"
+             )
     ),
 
     # Step 2
@@ -53,9 +59,20 @@ ui <- fluidPage(
              actionButton("run_script_2", "Cleanup AMC dataset"),
              br(),br(), br(),
              verbatimTextOutput("console_2"),
-             actionButton("prev_2", "Previous"),
+
              checkboxInput("completed_2", "I have completed this step"),
-             actionButton("next_2", "Next")
+             br(),br(),
+             # Bottom-left: Previous
+             fixedPanel(
+               actionButton("prev_2", "Previous"),
+               bottom = 10, left = 10, width = "auto"
+             ),
+
+             # Bottom-right: Next
+             fixedPanel(
+               actionButton("next_2", "Next"),
+               bottom = 10, right = 10, width = "auto"
+             )
     ),
 
     # Step 3
@@ -72,9 +89,20 @@ ui <- fluidPage(
              br(),br(),
              verbatimTextOutput("console_3"),
 
-             actionButton("prev_3", "Previous"),
+
              checkboxInput("completed_3", "I have completed this step"),
-             actionButton("next_3", "Next")
+             br(),br(),
+             # Bottom-left: Previous
+             fixedPanel(
+               actionButton("prev_3", "Previous"),
+               bottom = 10, left = 10, width = "auto"
+             ),
+
+             # Bottom-right: Next
+             fixedPanel(
+               actionButton("next_3", "Next"),
+               bottom = 10, right = 10, width = "auto"
+             )
     ),
 
     # Step 4
@@ -88,9 +116,20 @@ ui <- fluidPage(
              actionButton("run_script_4", "Begin analysis on the processed files"),
              br(),br(),
             verbatimTextOutput("console_4"),
-             actionButton("prev_4", "Previous"),
+
              checkboxInput("completed_4", "I have completed this step"),
-             actionButton("next_4", "Next")
+          br(),
+          # Bottom-left: Previous
+          fixedPanel(
+            actionButton("prev_4", "Previous"),
+            bottom = 10, left = 10, width = "auto"
+          ),
+
+          # Bottom-right: Next
+          fixedPanel(
+            actionButton("next_4", "Next"),
+            bottom = 10, right = 10, width = "auto"
+          )
     ),
 
     # Step 5
@@ -107,7 +146,14 @@ ui <- fluidPage(
              actionButton("run_script_5", "Finalize plots"),
              br(),br(),
              verbatimTextOutput("console_5"),
-             actionButton("prev_5", "Previous")
+             br(),
+
+             # Bottom-left: Previous
+             fixedPanel(
+               actionButton("prev_5", "Previous"),
+               bottom = 10, left = 10, width = "auto"
+             )
+
              #,
             # checkboxInput("completed_5", "I have completed this step"),
             # actionButton("next_5", "Next")

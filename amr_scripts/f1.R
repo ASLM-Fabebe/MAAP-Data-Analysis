@@ -15,7 +15,8 @@ if (rstudioapi::isAvailable()) {
 
 input_file <- list.files(folder_path, pattern = "^AMR.*.xlsx")
 
-amr <- readxl::read_excel(file.path(folder_path,input_file))
+amr <- readxl::read_excel(file.path(folder_path,input_file), guess_max = 21474836) %>%
+  dplyr::select(where(~ any(!is.na(.))))#drop all empty columns
 
 # Replace missing dates with dates e.g. from registration date col --------
 excel_origin = "1899-12-30"
@@ -29,8 +30,8 @@ choices1 <- sort(c(names(amr),'not available'))  # Use your real variable
 # Define initial df
 initial_df <- data.frame(
   man_vars = c('Specimen date', 'Date of data entry', 'Specimen type', "Organism", 'Age','AST guidelines',
-               'Sex', "Identification number", "Laboratory Name", "Patient Department"),
-  my_dataset = factor(rep('please select', 10), levels = choices1),
+               'Sex', "Identification number", "Laboratory Name", "Patient Department", "Patient Location Type"),
+  my_dataset = factor(rep('please select', 11), levels = choices1),
   stringsAsFactors = FALSE
 )
 

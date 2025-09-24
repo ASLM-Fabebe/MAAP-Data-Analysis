@@ -110,7 +110,7 @@ get_inputs_and_prelim_cleanup <- function(){
 
        r_id = row_number()
      ) %>%
-     select(-.num, -.posix)
+     dplyr::select(-.num, -.posix)
 
 
 
@@ -120,10 +120,13 @@ get_inputs_and_prelim_cleanup <- function(){
 
                "Specimen type" , # type of specimemn
 
-               "Organism",      # organism identified
-               "specimen_date_cleaned") #date of collection
+               "Organism"      # organism identified
+               ) #date of collection
 
   # Remove columns with NA values in any of the mandatory columns
+
+    #fill_function
+
 
   amr <- amr %>%
 
@@ -157,13 +160,15 @@ get_facilities_data <- function(df){
 
   facility_vec <- c("r_id","Identification number","Laboratory","Institution",
 
-                    "Location","Location type","Department","Origin","Country")
+                    "Patient Location Type","Location type","Department","Origin","Country",
+
+                    "Identification number", "Laboratory Name", "Patient Department")
 
   lkp_facility <- df %>%
 
     dplyr::select(any_of(facility_vec)) %>%
 
-    dplyr::select(where(~ !all(is.na(.))))  # remove columns with no values
+    #dplyr::select(where(~ !all(is.na(.))))  # remove columns with no values
 
   return(lkp_facility)
 }
@@ -318,7 +323,8 @@ get_sir_interpr <- function(df){
 
            intrinsic_res_status=''
 
-    )
+    )%>%
+    filter(!is.na(bacteria))
 
   if(nrow(famr_long_sir) > 0){
 
@@ -358,7 +364,8 @@ get_con_interp <- function(df){
 
            intrinsic_res_status=''
 
-    )
+    ) %>%
+    filter(!is.na(bacteria))
 
   return(famr_long_con)
 }

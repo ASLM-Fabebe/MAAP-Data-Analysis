@@ -295,6 +295,40 @@ ggsave(paste0(amc_dir_route,'/','AMC_s_routes_DID.png'),plt_s_route_tot, width=8
 cat('Analysis of antibiotic consumption by route done...\n')
 message('Analysis of antibiotic consumption by route done...')
 
+
+
+##by totals
+
+amc_dir_total <- file.path(cntry,"Results_AMC",'totals')
+
+if(!dir.exists(amc_dir_total)){dir.create(amc_dir_total, recursive = T)}
+
+
+amc %>% group_by(year) %>%
+  summarise(  tot_ddd=sum(ddd_equivalent)) %>%
+  ungroup() %>%
+  mutate(tot_did=tot_ddd*1000/365/pop) %>%
+  arrange(desc(tot_ddd)) -> totals_temp
+
+
+pd <- position_dodge2(width = 0.9, preserve = "single")
+
+plt_did_tot <- ggplot(totals_temp#%>% filter(year==y)
+                      , aes(x=as.factor(year), y=tot_did), fill='dodgerblue')+
+  geom_col(position = pd)+
+  labs(x='', y='Total DDD/1000 Inhabitants/day')+
+  #scale_fill_manual(values = my_colors) +
+  theme_classic()+
+  theme(legend.title = element_blank())
+
+ggsave(paste0(amc_dir_total,'/','AMC_Total_DID.png'),plt_did_tot, width=8, height=8, units="in", dpi=300)
+
+
+#}
+
+cat('Total DiDs done...\n')
+message('Total DiDs done...')
+
 ##Consumption trend
 # amc_dir_trend <- file.path(cntry,"Results_AMC",'Trend')
 #
