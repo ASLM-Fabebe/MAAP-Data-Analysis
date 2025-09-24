@@ -92,6 +92,7 @@ ui <- fluidPage(
              br(), br(), br(),
 
              checkboxInput("completed_2", "I have completed this step"),
+             br(),br(),
              # Bottom-left: Previous
              fixedPanel(
                actionButton("prev_2", "Previous"),
@@ -118,6 +119,7 @@ ui <- fluidPage(
 
              br(),br(), br(),
              checkboxInput("completed_3", "I have completed this step"),
+             br(),br(),
 
              # Bottom-left: Previous
              fixedPanel(
@@ -149,6 +151,7 @@ ui <- fluidPage(
              verbatimTextOutput("console_4"),
 
              checkboxInput("completed_4", "I have completed this step"),
+             br(), br(),
              # Bottom-left: Previous
              fixedPanel(
                actionButton("prev_4", "Previous"),
