@@ -277,7 +277,7 @@ server <- function(input, output, session) {
     })
   })
 
-  #operatin system for antibiograms
+  #operating system for antibiograms
   observeEvent(input$os_type, {
     req(input$os_type)  # ensure user has selected something
 
