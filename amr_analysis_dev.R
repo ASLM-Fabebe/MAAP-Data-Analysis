@@ -91,8 +91,17 @@ ui <- fluidPage(
              ),
              br(), br(), br(),
 
+             h4("Select Antibiotic columns"),
+
+             rHandsontableOutput("table_2a"),
+             br(),
+             downloadButton("download_2a", "Save Data"),
+             helpText(paste0("Save in ", amr_updates_dir,"/")),
+             br(), br(), br(),
+
              checkboxInput("completed_2", "I have completed this step"),
              br(),br(),
+
              # Bottom-left: Previous
              fixedPanel(
                actionButton("prev_2", "Previous"),
@@ -234,7 +243,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   # Step datasets (initially NULL except step1)
   step1_data <- reactiveVal(initial_df)
-  step2_data <- reactiveVal(long_df_cols)
+  step2_data <- reactiveVal(list( df1=long_df_cols,df2=ab_cols_user))
   step3_data <- reactiveVal(NULL)
 
   step4_data <- reactiveVal(NULL)
@@ -288,41 +297,80 @@ server <- function(input, output, session) {
 
 
 
-  ##Step 2
+  #---Step 2
+  # small helper to update one element of the list
+  set_step2 <- function(name, value) {
+    x <- step2_data()
+    x[[name]] <- value
+    step2_data(x)
+  }
 
   observeEvent(input$next_1, {
-    if(isTRUE(input$completed_1)) {
+    if (isTRUE(input$completed_1)) {
       updateTabsetPanel(session, "steps", "Step 2")
-      step2_data()  # Load only now
+
     }
   })
 
+  # ---- Table for df1 ----
   observeEvent(input$data_format_long, {
     if (isTRUE(input$data_format_long)) {
       output$table_2 <- renderRHandsontable({
-        df <- step2_data()
+        df <- step2_data()$df1
         req(df)
-        rhandsontable(df) %>%
-          hot_col("my_dataset", type = "dropdown", source = choices1, width = 200) %>%
-          hot_col("man_vars", readOnly = TRUE, width = 200)
+        tbl <- rhandsontable(df)
+
+        # guard hot_col calls so there is no error if cols are missing
+        if ("my_dataset" %in% names(df)) {
+          tbl <- hot_col(tbl, "my_dataset", type = "dropdown", source = choices1, width = 200)
+        }
+        if ("man_vars" %in% names(df)) {
+          tbl <- hot_col(tbl, "man_vars", readOnly = TRUE, width = 200)
+        }
+        tbl
       })
-
     } else {
-      output$table_2 <- renderRHandsontable(NULL)  # clear when unchecked
+      output$table_2 <- renderRHandsontable(NULL)
     }
   })
 
-  # Capture user edits from rhandsontable
-  observe({
-    if (!is.null(input$table_2)) {
-      step2_data(hot_to_r(input$table_2))
-    }
+  # capture edits for df1
+  observeEvent(input$table_2, ignoreInit = TRUE, {
+    set_step2("df1", hot_to_r(input$table_2))
   })
 
-  output$download_2 <- downloadHandler(filename = "long_format_amr_columns.xlsx",
-                                       content = function(file) writexl::write_xlsx(step3_data(), file))
+  output$download_2 <- downloadHandler(
+    filename = "long_format_amr_columns.xlsx",
+    content = function(file) writexl::write_xlsx(step2_data()$df1, path = file)
+  )
 
-  #Step 3
+  # ---- Table for df2 ----
+  output$table_2a <- renderRHandsontable({
+    df <- step2_data()$df2
+    req(df)
+    tbl <- rhandsontable(df)
+    if ("my_dataset" %in% names(df)) {
+      tbl <- hot_col(tbl, "my_dataset", readOnly = TRUE, width = 200)
+    }
+    if ("antibiotic_column" %in% names(df)) {
+      tbl <- hot_col(tbl, "antibiotic_column", type = "dropdown", source = c(" ", "Yes"), width = 200)
+    }
+    tbl
+  })
+
+  # capture edits for df2
+  observeEvent(input$table_2a, ignoreInit = TRUE, {
+    set_step2("df2", hot_to_r(input$table_2a))
+  })
+
+  output$download_2a <- downloadHandler(
+    filename = "present_antibiotic_columns.xlsx",
+    content = function(file) writexl::write_xlsx(step2_data()$df2, path = file)
+  )
+
+
+
+  #---Step 3
   observeEvent(input$next_2, {
     if(isTRUE(input$completed_2)) {
       updateTabsetPanel(session, "steps", "Step 3")
@@ -345,7 +393,7 @@ server <- function(input, output, session) {
 
 
 
-  #Step 4
+  #---Step 4
   ##the spec data
 
   observeEvent(input$next_3, {

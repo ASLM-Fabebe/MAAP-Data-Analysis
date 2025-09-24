@@ -202,9 +202,26 @@ get_guideline_info <- function(df){
 
 
 
+file_path <- file.path(amr_updates_dir,'present_antibiotic_columns.xlsx')
+
+if (file.exists(file_path)) {
+
+  #read in the data
+ ab_cols_user_vec <- read.xlsx(file_path) %>% # or read.csv, fread, etc.
+  filter(antibiotic_column=='Yes')
+
+ ab_cols_user_vec <- ab_cols_user_vec$my_dataset
+} else {
+  ab_cols_user_vec <- NULL
+
+}
+
+
+
 abx_vec_dict <- c(unique(readxl::read_excel(paste0('amr_resources/Antibiotic_Codes.xlsx'))$Code),
                   str_split_i(unique(readxl::read_excel(paste0('amr_resources/Antibiotic_Codes.xlsx'))$Code),'_',1),
-                  unique(readxl::read_excel(paste0('amr_resources/Antibiotic_Codes.xlsx'))$AntiMicrobialAgent))
+                  unique(readxl::read_excel(paste0('amr_resources/Antibiotic_Codes.xlsx'))$AntiMicrobialAgent),
+                  ab_cols_user_vec)
 
 
 get_test_results <- function(df){
@@ -250,7 +267,6 @@ get_test_results <- function(df){
   return(amr_res)
 
 }
-
 
 
 pivot_abx_results <- function(df){

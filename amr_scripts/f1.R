@@ -43,6 +43,11 @@ long_df_cols <- data.frame(
 )
 
 
+##Returning all columns present to allow user identify antibiotic columns
+ab_cols_user <- tibble(my_dataset=unique(names(amr)), antibiotic_column=rep('', length(unique(names(amr)))))
+
+
+
 # Match column classes of df2 to df1 and allow missing columns
 match_col_classes <- function(df1, df2) {
   # Handle completely empty df2
@@ -102,3 +107,6 @@ bind_rows_match_classes <- function(dfs) {
 amr_updates_dir <- file.path(folder_path, "analysis_updates")
 
 if(!dir.exists(amr_updates_dir)){dir.create(amr_updates_dir, recursive = T)}
+
+#suppress summarize messages
+options(dplyr.summarise.inform = FALSE)
