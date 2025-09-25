@@ -228,7 +228,7 @@ get_test_results <- function(df){
 
    # map antibiotics
 
-  abx_conformed <- as.ab(abx_vec_dict)
+  #abx_conformed <- as.ab(abx_vec_dict)
 
   # Specify mandatory columns -----------------------------------------------
   man_cols = c("specimen_date_cleaned", # data specimen collected
