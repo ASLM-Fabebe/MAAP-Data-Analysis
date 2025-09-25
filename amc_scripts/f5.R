@@ -304,11 +304,13 @@ amc_dir_total <- file.path(cntry,"Results_AMC",'totals')
 if(!dir.exists(amc_dir_total)){dir.create(amc_dir_total, recursive = T)}
 
 
-amc %>% group_by(year) %>%
+amc %>% group_by(year, antibiotic_molecules) %>%
   summarise(  tot_ddd=sum(ddd_equivalent)) %>%
   ungroup() %>%
   mutate(tot_did=tot_ddd*1000/365/pop) %>%
-  arrange(desc(tot_ddd)) -> totals_temp
+  group_by(year) %>%
+  summarise(tot_did=mean(tot_did)) %>%
+  arrange(desc(tot_did)) -> totals_temp
 
 
 pd <- position_dodge2(width = 0.9, preserve = "single")
