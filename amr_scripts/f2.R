@@ -43,8 +43,8 @@ amr_res <- get_test_results(df=amr)
 famr_long <- pivot_abx_results(df=amr_res)
 
 # separate breakpoints and SIR interpretations
-famr_long_sir <- get_sir_interpr(df=famr_long)
-famr_long_con <- get_con_interp(df=famr_long)
+famr_long_sir <- get_sir_interpr(df=famr_long)%>% filter(!is.na(ab_name(drug_code)))
+famr_long_con <- get_con_interp(df=famr_long)%>% filter(!is.na(ab_name(drug_code)))
 
 
 # Convert breakpoints to SIR ----------------------------------------------
@@ -56,9 +56,45 @@ cat('Please wait for this step to complete....\n')
 
 
 
-amr_con <- convert2sir_fun(famr_long_con)
+#doing conversions in batches
 
-amr_sir <- convert2sir_fun(famr_long_sir)
+chunk <- function(x, size=3000) {
+  if (size <= 0) stop("size must be > 0")
+  split(x, ceiling(seq_along(x) / size))
+}
+
+##mics and diameters
+chunks <- chunk(famr_long_con$int_id, 3000)
+
+chunk_hold <- list()
+
+for (ch in 1:length(chunks)){
+
+  chunk_hold[[ch]] <- convert2sir_fun(famr_long_con %>% filter(int_id %in% unlist(chunks[ch])))
+
+  message('Chunk....', ch, ' Interpretation completed, ', length(chunks)-ch, ' to go...')
+  cat('Chunk....', ch, ' Interpretation completed, ', length(chunks)-ch, ' to go...\n')
+}
+
+amr_con <- do.call('rbind', chunk_hold)
+
+
+#interpretations (SIR)
+chunks <- chunk(famr_long_sir$int_id, 3000)
+
+chunk_hold <- list()
+
+for (ch in 1:length(chunks)){
+
+  chunk_hold[[ch]] <- convert2sir_fun(famr_long_sir %>% filter(int_id %in% unlist(chunks[ch])))
+
+  message('Chunk....', ch, ' Interpretation completed, ', length(chunks)-ch, ' to go...')
+  cat('Chunk....', ch, ' Interpretation completed, ', length(chunks)-ch, ' to go...\n')
+}
+
+amr_sir <- do.call('rbind', chunk_hold)
+
+
 
 # combine results
 
@@ -66,8 +102,11 @@ sir_outcomes_df <- dplyr::bind_rows(amr_con, amr_sir) %>%
 
   dplyr::filter(intrinsic_res_status=='FALSE') %>%   #drop the intrinsically resistant bug-drugs to not skew results
 
-  dplyr::filter(interpreted_res!='NA')  #drop the UNINTERPRETABLE COMBOS FROM GUIDELINES
+  dplyr::filter(interpreted_res!='NA') %>%   #drop the UNINTERPRETABLE COMBOS FROM GUIDELINES
 
+  arrange(interpreted_res) %>%
+
+  distinct(r_id, uid, organism,ab, .keep_all = T)
 
 excluded_rec <- bind_rows(amr_con, amr_sir) %>%
 
@@ -101,6 +140,22 @@ sir_outcomes_df_wide <- sir_outcomes_df %>%
 loc_opts <- c('Inpatient','Outpatient','ICU or Critical care', 'Other')
 
 loc_options=data.frame(my_dataset=unique(lkp_facility$`Patient Location Type`), options=c(rep('', length(unique(lkp_facility$`Patient Location Type`)))))
+
+#setup specimen lookup
+#
+# spec_ops = sort(c(   "Blood",
+#                      "Genital",
+#                      "Respiratory",
+#                      "Soft tissue & body fluids",
+#                      "Stool",
+#                      "Urine",
+#                      "Other",
+#                      "Unknown",
+#                      "Cerebrospinal fluid",
+#                      "Sputum", "Joint fluid"
+# ))
+#
+# spec_all_options=data.frame(my_dataset=unique(lkp_facility$`Patient Location Type`), options=c(rep('', length(unique(lkp_facility$`Patient Location Type`)))))
 
 
 message('SIR interpretations complete ....')

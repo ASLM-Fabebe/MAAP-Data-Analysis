@@ -43,7 +43,8 @@ an_df <- sir_outcomes_df_wide %>%
          Sex =str_to_title(Sex),
          specimen_type=tolower(specimen_type)) %>%
   left_join(spec_options, by=c('specimen_type'='Spec_Type_code')) %>%
-  mutate(specimen_type=ifelse(!is.na(Spec_name), Spec_name, specimen_type)) %>%
+  mutate(specimen_type=ifelse(!is.na(Spec_name), Spec_name, specimen_type),
+         specimen_type=tolower(specimen_type)) %>%
   distinct(uid, `Laboratory Name`, specimen_date, specimen_type, organism, .keep_all = T)
 
 
@@ -175,70 +176,96 @@ priority_fungi_pathogens_grp <- c("Histoplasma","Paracoccidioides",
 
 #priority_fungal_vec <- priority_Fungi_pathogens
 
+##get the years in the dataset with atleast 50 records
+data_yrs <- an_df_long %>% group_by(yr) %>% summarise(n=n()) %>%
+  filter(n>50)
+
 
 # Set up cluster
+options(connectionObserver = NULL)
 
-#registerDoParallel(cl, cores = detectCores() - 1)
+## ---- setup ----
 
-#cl <- parallel::makeCluster(max(1, parallel::detectCores() - 1), type = "PSOCK")
-#doParallel::registerDoParallel(cl)
 
-vars_fun <- c("an_df_long","y","par","par_df","an_df",
-              #"an_glass_df",
-              "indiv_ab_resistance", "overall_ab_resistance",
-              "indiv_ab_resistance_sau","overall_ab_resistance_sau",
-              "indiv_ab_resistance_genus", "overall_ab_resistance_genus",
-              "antibiotic_classes_res_indiv", "antibiotic_classes_res_grp",
-              "overall_resistance_plot","indiv_ab_resistance_plot",
-              #"amr_individual_pathogens",
-              "mrsa_analysis",
-              #"amr_pathogen_groups",
-              "indiv_ab_resistance_plot_trends", "overall_resistance_plot_trends",
-              "indiv_ab_resistance_plot_trends_quarter", "overall_resistance_plot_trends_quarter"
+
+vars_fun <- c(
+  "an_df_long","y","par","par_df","an_df",
+  "indiv_ab_resistance", "overall_ab_resistance",
+  "indiv_ab_resistance_sau","overall_ab_resistance_sau",
+  "indiv_ab_resistance_genus", "overall_ab_resistance_genus",
+  "antibiotic_classes_res_indiv", "antibiotic_classes_res_grp",
+  "overall_resistance_plot","indiv_ab_resistance_plot",
+  "mrsa_analysis",
+  "indiv_ab_resistance_plot_trends", "overall_resistance_plot_trends",
+  "indiv_ab_resistance_plot_trends_quarter", "overall_resistance_plot_trends_quarter",
+  "mkpath","parallel_guard"                 # SHINY: export the small helpers below
 )
 
-# on.exit({
-#   doParallel::registerDoSEQ()
-#   try(parallel::stopCluster(cl), silent = TRUE)
-# }, add = TRUE)
-#
-# # Dynamically block any connection/cluster objects from auto-export
-# all_names <- ls(envir = .GlobalEnv, all.names = TRUE)
-# connish <- Filter(function(nm) {
-#   obj <- try(get(nm, envir = .GlobalEnv), silent = TRUE)
-#   if (inherits(obj, "try-error")) return(FALSE)
-#   inherits(obj, "connection") || inherits(obj, "cluster") || inherits(obj, "sockconn")
-# }, all_names)
+# SHINY: stop cluster when the Shiny session ends
+if (requireNamespace("shiny", quietly = TRUE)) {
+  dom <- shiny::getDefaultReactiveDomain()
+  if (!is.null(dom)) dom$onSessionEnded(function() {
+    try(parallel::stopCluster(cl), silent = TRUE)
+  })
+}
 
 
+# unregister & stop cluster on exit (correct namespace + robust stop)
+on.exit({
+  foreach::registerDoSEQ()
+  try(parallel::stopCluster(cl), silent = TRUE)
+}, add = TRUE)
+
+# Dynamically block any connection/cluster objects from auto-export
+all_names <- ls(envir = .GlobalEnv, all.names = TRUE)
+connish <- Filter(function(nm) {
+  obj <- try(get(nm, envir = .GlobalEnv), silent = TRUE)
+  if (inherits(obj, "try-error")) return(FALSE)
+  inherits(obj, "connection") || inherits(obj, "cluster") || inherits(obj, "sockconn")
+}, all_names)
+
+# a helper that makes dirs safely in parallel (no warnings on races)
+mkpath <- function(p) {
+  if (!dir.exists(p)) dir.create(p, recursive = TRUE, showWarnings = FALSE)
+}
+
+# register backend once (you can keepper-loop registrations; this is harmless and safer)
 #doParallel::registerDoParallel(cl)
-#foreach (y=an_df_long$yr,.packages=loadedNamespaces(), .export = vars_fun,.noexport = unique(c(connish, "cl", "con", "conn", "db", "drv")) , .errorhandling = "pass") %dopar% {
 
-for (y in unique(an_df_long$yr)) {
+# SHINY: guard to close any sinks/devices opened by worker code
+parallel_guard <- function() {
+  old_out <- sink.number(type = "output")
+  old_msg <- sink.number(type = "message")
+  on.exit({
+    while (sink.number(type = "output") > old_out) sink(NULL, type = "output")
+    while (sink.number(type = "message") > old_msg) sink(NULL, type = "message")
+    while (grDevices::dev.cur() > 1) grDevices::dev.off()
+  }, add = TRUE)
+  invisible(NULL)
+}
 
-for (i in par_df$id) {
+# ensure workers have what we need without exporting entire loadedNamespaces
+pkg_slim <- setdiff(loadedNamespaces(),
+                    c("base","compiler","datasets","grDevices","graphics","grid",
+                      "methods","parallel","splines","stats","stats4","tcltk","tools",
+                      "utils","translations","codetools","pkgbuild","doParallel","foreach"))
 
-  par=par_df$param[par_df$id==i]
+# If you know specific packages (e.g., stringr, dplyr, ggplot2) you can add them explicitly:
+pkg_slim <- union(pkg_slim, c("stringr"))  # adjust if your body uses more packages
 
-  par_var_name=par_df$var_name[par_df$id==i]
-
-
-  cntry = cntry
-
-  par=par
-
-  par_var_name=par_var_name
-
-   # org_name='Escherichia coli',
-  # abs_ref <- c("AMP", "CFR", "CTX", "CAZ", "CIP", "GEN", "TOB", "MEC", "MEM", "NIT", "TZP", "TMP", "SXT")
+# route worker stdout/stderr to the master (prevents dangling/sunk connections)
+cl <- parallel::makeCluster(max(1, parallel::detectCores() - 1),
+                            outfile = NULL,                           # SHINY FIX: don't write to stdout/files
+                            type = "PSOCK",
+                            rscript_args = c("--vanilla"))             # SHINY FIX: clean worker sessions)
 
 
-  abs_ref <- unique(an_df_long$ab)
-
+## ---- loops ----
+for (y in unique(data_yrs$yr)) {
 
   #Antibiogram
 
-    an_dfx <- an_df %>% mutate(year=format(specimen_date, "%Y")) %>%
+  an_dfx <- an_df %>% mutate(year=format(specimen_date, "%Y")) %>%
     filter(year==y)
 
 
@@ -280,139 +307,173 @@ for (i in par_df$id) {
 
 
 
+  for (i in par_df$id) {
 
-  #Bacterial segment
-
-  #doParallel::registerDoParallel(cl)
-  #registerDoParallel(cl, cores = detectCores() - 1)
-  #foreach (px=priority_bact_vec,.packages=loadedNamespaces(), .export = vars_fun, .errorhandling = "pass") %dopar% {
-
-     for(i in seq_along(priority_bact_pathogens)){
-    org_name <- priority_bact_pathogens[i]
-    org_name_dir <-str_replace_all(org_name," ","_")
-    org_name_dir <-str_replace_all(org_name_dir,"\\(|\\)","_")
-    org_res_dir <- file.path(paste0(cntry,"/Results_AMR/Bacteria"),org_name_dir, y,'Identified pathogen')
-    org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/Bacteria"),org_name_dir,y, 'Identified pathogen',par)
-    org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/Bacteria"),org_name_dir,'Trends','Identified pathogen', 'year')
-    org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/Bacteria"),org_name_dir,'Trends','Identified pathogen',par, 'year')
-
-    if(!dir.exists(org_res_dir)){dir.create(org_res_dir, recursive = T)}
-    if(!dir.exists(org_res_dir_par)){dir.create(org_res_dir_par, recursive = T)}
-    if(!dir.exists(org_res_dir_trends)){dir.create(org_res_dir_trends, recursive = T)}
-    if(!dir.exists(org_res_dir_trends_par)){dir.create(org_res_dir_trends_par, recursive = T)}
-
-    amr_individual_pathogens(an_df_long,org_res_dir,org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
-                             org_res_dir_trends,org_res_dir_trends_par)
-     }
- # }
-  #stopCluster(cl)
+    par <- par_df$param[par_df$id == i]
+    par_var_name <- par_df$var_name[par_df$id == i]
+    abs_ref <- unique(an_df_long$ab)
 
 
 
-  org_name = "Staphylococcus aureus"
-  org_name_dir <-paste(org_name,"mrsa")
-  org_name_dir <-str_replace_all(org_name_dir,"\\(|\\)","_")
-  org_res_dir <- file.path(paste0(cntry,"/Results_AMR/Bacteria"),org_name_dir, y,'Identified pathogen')
-  org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/Bacteria"),org_name_dir,y, 'Identified pathogen',par)
-  org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/Bacteria"),org_name_dir,'Trends','Identified pathogen', 'year')
-  org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/Bacteria"),org_name_dir,'Trends','Identified pathogen',par, 'year')
+    message(paste0(y), " ",par," analysis in progress...please hang in there ....")
+    cat(paste0(y), " ",par," analysis in progress...please hang in there ....\n")
 
-  if(!dir.exists(org_res_dir)){dir.create(org_res_dir, recursive = T)}
-  if(!dir.exists(org_res_dir_par)){dir.create(org_res_dir_par, recursive = T)}
-  if(!dir.exists(org_res_dir_trends)){dir.create(org_res_dir_trends, recursive = T)}
-  if(!dir.exists(org_res_dir_trends_par)){dir.create(org_res_dir_trends_par, recursive = T)}
+    ## ---- Bacterial: individual pathogens ----
+   doParallel::registerDoParallel(cl)
+    parallel::clusterCall(cl, function() options(warn = -1))  #silence the warnings
 
-  mrsa_analysis(an_df_long,org_res_dir,org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
-                org_res_dir_trends,org_res_dir_trends_par)
+    foreach(
+      px = priority_bact_pathogens,
+      .packages = pkg_slim,
+      .export   = unique(c(vars_fun, "y","par","par_var_name","abs_ref","cntry")),
+      .noexport = unique(c(connish, "cl","con","conn","db","drv")),
+      .errorhandling = "pass"
+    ) %dopar% {
+      parallel_guard()
 
+      # fully qualify stringr calls so workers don’t depend on search path
+      org_name <- px
+      org_name_dir <- stringr::str_replace_all(org_name, " ", "_")
+      org_name_dir <- stringr::str_replace_all(org_name_dir, "\\(|\\)", "_")
 
+      org_res_dir         <- file.path(paste0(cntry,"/Results_AMR/Bacteria"), org_name_dir, y, "Identified pathogen")
+      org_res_dir_par     <- file.path(paste0(cntry,"/Results_AMR/Bacteria"), org_name_dir, y, "Identified pathogen", par)
+      org_res_dir_trends  <- file.path(paste0(cntry,"/Results_AMR/Bacteria"), org_name_dir, "Trends", "Identified pathogen", "year")
+      org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/Bacteria"), org_name_dir, "Trends", "Identified pathogen", par, "year")
 
+      mkpath(org_res_dir)
+      mkpath(org_res_dir_par)
+      mkpath(org_res_dir_trends)
+      mkpath(org_res_dir_trends_par)
 
- # registerDoParallel(cl, cores = detectCores() - 1)
-  #foreach (px=priority_bact_vec,.packages=loadedNamespaces(), .export = vars_fun) %dopar% {
+      amr_individual_pathogens(
+        an_df_long, org_res_dir, org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
+        org_res_dir_trends, org_res_dir_trends_par
+      )
+      NULL  # return nothing to avoid serializing large objects
+    }
 
-      for(i in seq_along(priority_bact_pathogens_grp)){
-    org_name <- priority_bact_pathogens_grp[i] ##extracting the genus name
-    org_name_dir <-str_replace_all(org_name," ","_")
-    org_name_dir <-str_replace_all(org_name_dir,"\\(|\\)","_")
-    org_res_dir <- file.path(paste0(cntry,"/Results_AMR/Bacteria"),org_name_dir,y,"pathogen_grp")
-    org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/Bacteria"),org_name_dir,y, 'pathogen_grp',par)
-    org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/Bacteria"),org_name_dir,'Trends','pathogen_grp', 'year')
-    org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/Bacteria"),org_name_dir,'Trends','pathogen_grp',par, 'year')
+    ## ---- MRSA ----
+    org_name <- "Staphylococcus aureus"
+    org_name_dir <- paste(org_name, "mrsa")
+    org_name_dir <- stringr::str_replace_all(org_name_dir, "\\(|\\)", "_")
+    org_res_dir <- file.path(paste0(cntry,"/Results_AMR/Bacteria"), org_name_dir, y, "Identified pathogen")
+    org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/Bacteria"), org_name_dir, y, "Identified pathogen", par)
+    org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/Bacteria"), org_name_dir, "Trends", "Identified pathogen", "year")
+    org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/Bacteria"), org_name_dir, "Trends", "Identified pathogen", par, "year")
 
-    if(!dir.exists(org_res_dir)){dir.create(org_res_dir, recursive = T)}
-    if(!dir.exists(org_res_dir_par)){dir.create(org_res_dir_par, recursive = T)}
-    if(!dir.exists(org_res_dir_trends)){dir.create(org_res_dir_trends, recursive = T)}
-    if(!dir.exists(org_res_dir_trends_par)){dir.create(org_res_dir_trends_par, recursive = T)}
+    mkpath(org_res_dir)
+    mkpath(org_res_dir_par)
+    mkpath(org_res_dir_trends)
+    mkpath(org_res_dir_trends_par)
 
-    amr_pathogen_groups(an_df_long,org_res_dir,org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
-                        org_res_dir_trends, org_res_dir_trends_par)
+    mrsa_analysis(
+      an_df_long, org_res_dir, org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
+      org_res_dir_trends, org_res_dir_trends_par
+    )
 
-    #  }
-  }
+    ## ---- Bacterial: pathogen groups ----
+   doParallel::registerDoParallel(cl)
+    parallel::clusterCall(cl, function() options(warn = -1))
 
- # stopCluster(cl)
+    foreach(
+      px1 = priority_bact_pathogens_grp,
+      .packages = pkg_slim,                                  # FIX
+      .export   = unique(c(vars_fun, "y","par","par_var_name","abs_ref","cntry")),  # FIX
+      .noexport = unique(c(connish, "cl","con","conn","db","drv")),
+      .errorhandling = "pass"
+    ) %dopar% {
+      parallel_guard()  # SHINY FIX
 
+      org_name <- px1
+      org_name_dir <- stringr::str_replace_all(org_name, " ", "_")
+      org_name_dir <- stringr::str_replace_all(org_name_dir, "\\(|\\)", "_")
 
+      org_res_dir <- file.path(paste0(cntry,"/Results_AMR/Bacteria"), org_name_dir, y, "pathogen_grp")
+      org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/Bacteria"), org_name_dir, y, "pathogen_grp", par)
+      org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/Bacteria"), org_name_dir, "Trends", "pathogen_grp", "year")
+      org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/Bacteria"), org_name_dir, "Trends", "pathogen_grp", par, "year")
 
-  #Fungal#priority_fungi_vec
+      mkpath(org_res_dir); mkpath(org_res_dir_par)
+      mkpath(org_res_dir_trends); mkpath(org_res_dir_trends_par)
 
-  # registerDoParallel(cl, cores = detectCores() - 1)
-  # foreach (px=priority_fungal_vec,.packages=loadedNamespaces(), .export = vars_fun) %dopar% {
-  #
-     for(i in seq_along(priority_fungi_pathogens)){
-    org_name <- priority_fungi_pathogens[i]
-    org_name_dir <-str_replace_all(org_name," ","_")
-    org_name_dir <-str_replace_all(org_name_dir,"\\(|\\)","_")
-    org_res_dir <- file.path(paste0(cntry,"/Results_AMR/Fungi"),org_name_dir, y,'Identified pathogen')
-    org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/Fungi"),org_name_dir,y, 'Identified pathogen',par)
-    org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/Fungi"),org_name_dir,'Trends','Identified pathogen', 'year')
-    org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/Fungi"),org_name_dir,'Trends','Identified pathogen',par, 'year')
+      amr_pathogen_groups(
+        an_df_long, org_res_dir, org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
+        org_res_dir_trends, org_res_dir_trends_par
+      )
+      NULL
+    }
 
-    if(!dir.exists(org_res_dir)){dir.create(org_res_dir, recursive = T)}
-    if(!dir.exists(org_res_dir_par)){dir.create(org_res_dir_par, recursive = T)}
-    if(!dir.exists(org_res_dir_trends)){dir.create(org_res_dir_trends, recursive = T)}
-    if(!dir.exists(org_res_dir_trends_par)){dir.create(org_res_dir_trends_par, recursive = T)}
+    ## ---- Fungal: individual pathogens ----
+   doParallel::registerDoParallel(cl)
+    parallel::clusterCall(cl, function() options(warn = -1))
 
-    amr_individual_pathogens(an_df_long,org_res_dir,org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
-                             org_res_dir_trends,org_res_dir_trends_par)
-     }
-  # }
-  # stopCluster(cl)
+    foreach(
+      px2 = priority_fungi_pathogens,
+      .packages = pkg_slim,
+      .export   = unique(c(vars_fun, "y","par","par_var_name","abs_ref","cntry")),
+      .noexport = unique(c(connish, "cl","con","conn","db","drv")),
+      .errorhandling = "pass"
+    ) %dopar% {
+      parallel_guard()  # SHINY FIX
 
+      org_name <- px2
+      org_name_dir <- stringr::str_replace_all(org_name, " ", "_")
+      org_name_dir <- stringr::str_replace_all(org_name_dir, "\\(|\\)", "_")
 
+      org_res_dir <- file.path(paste0(cntry,"/Results_AMR/Fungi"), org_name_dir, y, "Identified pathogen")
+      org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/Fungi"), org_name_dir, y, "Identified pathogen", par)
+      org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/Fungi"), org_name_dir, "Trends", "Identified pathogen", "year")
+      org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/Fungi"), org_name_dir, "Trends", "Identified pathogen", par, "year")
 
+      mkpath(org_res_dir); mkpath(org_res_dir_par)
+      mkpath(org_res_dir_trends); mkpath(org_res_dir_trends_par)
 
- # registerDoParallel(cl, cores = detectCores() - 1)
-  #foreach (px=priority_fungal_vec,.packages=loadedNamespaces(), .export = vars_fun) %dopar% {
+      amr_individual_pathogens(
+        an_df_long, org_res_dir, org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
+        org_res_dir_trends, org_res_dir_trends_par
+      )
+      NULL
+    }
 
-      for(i in seq_along(priority_fungi_pathogens_grp)){
-    org_name <- priority_fungi_pathogens_grp[i] ##extracting the genus name
-    org_name_dir <-str_replace_all(org_name," ","_")
-    org_name_dir <-str_replace_all(org_name_dir,"\\(|\\)","_")
-    org_res_dir <- file.path(paste0(cntry,"/Results_AMR/Fungi"),org_name_dir,y,"pathogen_grp")
-    org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/Fungi"),org_name_dir,y, 'pathogen_grp',par)
-    org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/Fungi"),org_name_dir,'Trends','pathogen_grp', 'year')
-    org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/Fungi"),org_name_dir,'Trends','pathogen_grp',par, 'year')
+    ## ---- Fungal: pathogen groups ----
+    doParallel::registerDoParallel(cl)
+    parallel::clusterCall(cl, function() options(warn = -1))
 
-    if(!dir.exists(org_res_dir)){dir.create(org_res_dir, recursive = T)}
-    if(!dir.exists(org_res_dir_par)){dir.create(org_res_dir_par, recursive = T)}
-    if(!dir.exists(org_res_dir_trends)){dir.create(org_res_dir_trends, recursive = T)}
-    if(!dir.exists(org_res_dir_trends_par)){dir.create(org_res_dir_trends_par, recursive = T)}
+    foreach(
+      px3 = priority_fungi_pathogens_grp,
+      .packages = pkg_slim,
+      .export   = unique(c(vars_fun, "y","par","par_var_name","abs_ref","cntry")),
+      .noexport = unique(c(connish, "cl","con","conn","db","drv")),
+      .errorhandling = "pass"
+    ) %dopar% {
+      parallel_guard()  # SHINY FIX
 
-    amr_pathogen_groups(an_df_long,org_res_dir,org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
-                        org_res_dir_trends, org_res_dir_trends_par)
+      org_name <- px3
+      org_name_dir <- stringr::str_replace_all(org_name, " ", "_")
+      org_name_dir <- stringr::str_replace_all(org_name_dir, "\\(|\\)", "_")
 
-    #  }
-  }
+      org_res_dir <- file.path(paste0(cntry,"/Results_AMR/Fungi"), org_name_dir, y, "pathogen_grp")
+      org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/Fungi"), org_name_dir, y, "pathogen_grp", par)
+      org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/Fungi"), org_name_dir, "Trends", "pathogen_grp", "year")
+      org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/Fungi"), org_name_dir, "Trends", "pathogen_grp", par, "year")
 
+      mkpath(org_res_dir); mkpath(org_res_dir_par)
+      mkpath(org_res_dir_trends); mkpath(org_res_dir_trends_par)
 
-  }
+      amr_pathogen_groups(
+        an_df_long, org_res_dir, org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
+        org_res_dir_trends, org_res_dir_trends_par
+      )
+      NULL
+    }
 
-  message(paste0(y),' done ....')
-  cat(paste0(y),' done ....\n')
-}
-#stopCluster(cl)
+  } # end par loop
+
+  message(paste0(y), " done ....")
+  cat(paste0(y), " done ....\n")
+} # end year loop
+
 
 ##GLASS calculations
 glass_opts <- read_excel('amr_resources/list_glass_2.xlsx') %>%

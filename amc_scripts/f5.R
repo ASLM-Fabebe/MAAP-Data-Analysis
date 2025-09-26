@@ -316,8 +316,8 @@ amc %>% group_by(year, antibiotic_molecules) %>%
 pd <- position_dodge2(width = 0.9, preserve = "single")
 
 plt_did_tot <- ggplot(totals_temp#%>% filter(year==y)
-                      , aes(x=as.factor(year), y=tot_did), fill='dodgerblue')+
-  geom_col(position = pd)+
+                      , aes(x=as.factor(year), y=tot_did))+
+  geom_col(position = pd, fill='dodgerblue')+
   labs(x='', y='Total DDD/1000 Inhabitants/day')+
   #scale_fill_manual(values = my_colors) +
   theme_classic()+

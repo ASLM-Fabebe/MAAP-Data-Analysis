@@ -188,6 +188,8 @@ ui <- fluidPage(
              verbatimTextOutput("console_5"),
 
              checkboxInput("completed_5", "I have completed this step"),
+
+             br(),br(),
              # Bottom-left: Previous
              fixedPanel(
                actionButton("prev_5", "Previous"),

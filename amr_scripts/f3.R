@@ -39,105 +39,97 @@ message('Beginning GLASS analysis ....')
 cat('Beginning GLASS analysis ....\n')
 
 
+# route worker stdout/stderr to the master (prevents dangling/sunk connections)
+cl <- parallel::makeCluster(max(1, parallel::detectCores() - 1),
+                            outfile = NULL,                           # don't write to stdout/files
+                            type = "PSOCK",
+                            rscript_args = c("--vanilla"))             # clean worker sessions)
 
 
-for (y in unique(an_df_long$yr)) {
+  ## ---- loops ----
+  for (y in unique(data_yrs$yr)) {
+
+    for (i in par_df$id) {
+
+      par <- par_df$param[par_df$id == i]
+      par_var_name <- par_df$var_name[par_df$id == i]
+
+      #spaecimen distribution
+      if (y==unique(an_df_long$yr)[1] & par==unique(par_df$param)[1]){
+
+        specimen_distribution(an_glass_df)
+      }else{
+        NULL
+      }
+
+      abs_ref <- unique(an_glass_df$ab)
 
 
-for (i in par_df$id) {
+      message(paste0(y), " ",par," analysis now in progress...please hang in there ....")
+      cat(paste0(y), " ",par," analysis now in progress...please hang in there ....\n")
 
-  par=par_df$param[par_df$id==i]
+      ## ---- Bacterial: individual pathogens ----
+      # (Keeping re-registration; it’s okay and idempotent.)
+      doParallel::registerDoParallel(cl)
+      parallel::clusterCall(cl, function() options(warn = -1))
 
-  par_var_name=par_df$var_name[par_df$id==i]
+      foreach(
+        px = priority_glass_pathogens,
+        .packages = pkg_slim,
+        .export   = unique(c(vars_fun, "y","par","par_var_name","abs_ref","cntry")),
+        .noexport = unique(c(connish, "cl","con","conn","db","drv")),
+        .errorhandling = "pass"
+      ) %dopar% {
 
+        parallel_guard()
 
-  cntry = cntry
+        # fully qualify stringr calls so workers don’t depend on search path
+        org_name <- px
+        org_name_dir <- stringr::str_replace_all(org_name, " ", "_")
+        org_name_dir <- stringr::str_replace_all(org_name_dir, "\\(|\\)", "_")
 
-  par=par
+        org_res_dir         <- file.path(paste0(cntry,"/Results_AMR/GLASS"), org_name_dir, y, "Identified pathogen")
+        org_res_dir_par     <- file.path(paste0(cntry,"/Results_AMR/GLASS"), org_name_dir, y, "Identified pathogen", par)
+        org_res_dir_trends  <- file.path(paste0(cntry,"/Results_AMR/GLASS"), org_name_dir, "Trends", "Identified pathogen", "year")
+        org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/GLASS"), org_name_dir, "Trends", "Identified pathogen", par, "year")
 
-  par_var_name=par_var_name
+        mkpath(org_res_dir)
+        mkpath(org_res_dir_par)
+        mkpath(org_res_dir_trends)
+        mkpath(org_res_dir_trends_par)
 
- #spaecimen distribution
-  if (y==unique(an_df_long$yr)[1] & par==unique(par_df$param)[1]){
+        amr_individual_pathogens(
+          an_glass_df, org_res_dir, org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
+          org_res_dir_trends, org_res_dir_trends_par
+        )
+        NULL  #  return nothing to avoid serializing large objects
+      }
 
-  specimen_distribution(an_glass_df)
-  }else{
-    NULL
-  }
+      ## ---- MRSA ----
+      org_name <- "Staphylococcus aureus"
+      org_name_dir <- paste(org_name, "mrsa")
+      org_name_dir <- stringr::str_replace_all(org_name_dir, "\\(|\\)", "_")
+      org_res_dir <- file.path(paste0(cntry,"/Results_AMR/GLASS"), org_name_dir, y, "Identified pathogen")
+      org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/GLASS"), org_name_dir, y, "Identified pathogen", par)
+      org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/GLASS"), org_name_dir, "Trends", "Identified pathogen", "year")
+      org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/GLASS"), org_name_dir, "Trends", "Identified pathogen", par, "year")
 
+      mkpath(org_res_dir)
+      mkpath(org_res_dir_par)
+      mkpath(org_res_dir_trends)
+      mkpath(org_res_dir_trends_par)
 
-  abs_ref <- unique(an_glass_df$ab)
+      mrsa_analysis(
+        an_glass_df, org_res_dir, org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
+        org_res_dir_trends, org_res_dir_trends_par
+      )
 
+    } # end par loop
 
-  #foreach (px=priority_glass_pathogens,.packages=loadedNamespaces(), .export = vars_fun) %dopar% {
+    message(paste0(y), " done ....")
+    cat(paste0(y), " done ....\n")
+  } # end year loop
 
-  for(i in seq_along(priority_glass_pathogens)){
-    org_name <- priority_glass_pathogens[i]
-    org_name_dir <-str_replace_all(org_name," ","_")
-    org_name_dir <-str_replace_all(org_name_dir,"\\(|\\)","_")
-    org_res_dir <- file.path(paste0(cntry,"/Results_AMR/GLASS"),org_name_dir, y,'Identified pathogen')
-    org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/GLASS"),org_name_dir,y, 'Identified pathogen',par)
-    org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/GLASS"),org_name_dir,'Trends','Identified pathogen', 'year')
-    org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/GLASS"),org_name_dir,'Trends','Identified pathogen',par, 'year')
-
-    if(!dir.exists(org_res_dir)){dir.create(org_res_dir, recursive = T)}
-    if(!dir.exists(org_res_dir_par)){dir.create(org_res_dir_par, recursive = T)}
-    if(!dir.exists(org_res_dir_trends)){dir.create(org_res_dir_trends, recursive = T)}
-    if(!dir.exists(org_res_dir_trends_par)){dir.create(org_res_dir_trends_par, recursive = T)}
-
-    amr_individual_pathogens(an_glass_df,org_res_dir,org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
-                             org_res_dir_trends,org_res_dir_trends_par)
-# }
-  }
-
- # stopCluster(cl)
-
-
-  org_name = "Staphylococcus aureus"
-  org_name_dir <-paste(org_name,"mrsa")
-  org_name_dir <-str_replace_all(org_name_dir,"\\(|\\)","_")
-  org_res_dir <- file.path(paste0(cntry,"/Results_AMR/GLASS"),org_name_dir, y,'Identified pathogen')
-  org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/GLASS"),org_name_dir,y, 'Identified pathogen',par)
-  org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/GLASS"),org_name_dir,'Trends','Identified pathogen', 'year')
-  org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/GLASS"),org_name_dir,'Trends','Identified pathogen',par, 'year')
-
-  if(!dir.exists(org_res_dir)){dir.create(org_res_dir, recursive = T)}
-  if(!dir.exists(org_res_dir_par)){dir.create(org_res_dir_par, recursive = T)}
-  if(!dir.exists(org_res_dir_trends)){dir.create(org_res_dir_trends, recursive = T)}
-  if(!dir.exists(org_res_dir_trends_par)){dir.create(org_res_dir_trends_par, recursive = T)}
-
-  mrsa_analysis(an_glass_df,org_res_dir,org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
-                           org_res_dir_trends,org_res_dir_trends_par)
-
-
- # foreach (px=priority_glass_pathogens,.packages=loadedNamespaces(), .export = vars_fun) %dopar% {
-
-  for(i in seq_along(priority_glass_pathogens)){
-    org_name <- priority_glass_pathogens[i] ##extracting the genus name
-    org_name_dir <-str_replace_all(org_name," ","_")
-    org_name_dir <-str_replace_all(org_name_dir,"\\(|\\)","_")
-    org_res_dir <- file.path(paste0(cntry,"/Results_AMR/GLASS"),org_name_dir,y,"pathogen_grp")
-    org_res_dir_par <- file.path(paste0(cntry,"/Results_AMR/GLASS"),org_name_dir,y, 'pathogen_grp',par)
-    org_res_dir_trends <- file.path(paste0(cntry,"/Results_AMR/GLASS"),org_name_dir,'Trends','pathogen_grp', 'year')
-    org_res_dir_trends_par <- file.path(paste0(cntry,"/Results_AMR/GLASS"),org_name_dir,'Trends','pathogen_grp',par, 'year')
-
-    if(!dir.exists(org_res_dir)){dir.create(org_res_dir, recursive = T)}
-    if(!dir.exists(org_res_dir_par)){dir.create(org_res_dir_par, recursive = T)}
-    if(!dir.exists(org_res_dir_trends)){dir.create(org_res_dir_trends, recursive = T)}
-    if(!dir.exists(org_res_dir_trends_par)){dir.create(org_res_dir_trends_par, recursive = T)}
-
-    amr_pathogen_groups(an_glass_df,org_res_dir,org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name,
-                        org_res_dir_trends, org_res_dir_trends_par)
-
-  }
-  # }
-  #
-  # stopCluster(cl)
-
-}
-  message(paste0(y),' done ....')
-  cat(paste0(y),' done ....\n')
-}
 
 
 message('GLASS Analysis successfully completed ....')

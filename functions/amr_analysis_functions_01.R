@@ -13,14 +13,17 @@ convert2sir_fun <- function(df, n_cores = detectCores() - 1) {
   id_vec <- df %>% pull(int_id)
 
   # Set up cluster
-  cl <- makeCluster(n_cores)
-  clusterEvalQ(cl, {
+  cl1 <- makeCluster(n_cores)
+  clusterEvalQ(cl1, {
     library(dplyr)
     library(AMR)
   })
-  clusterExport(cl, c("df"), envir = environment())
+  clusterExport(cl1, c("df"), envir = environment())
 
-  res_list <- parLapply(cl, id_vec, function(i) {
+  res_list <- parLapply(cl1, id_vec, function(i) {
+
+    df <- df %>% filter(!is.na(ab_name(drug_code)))  #drops the unrecognized antibiotic columns
+
     sub_df <- df %>% filter(int_id == i)
 
     id <- sub_df[["int_id"]]
@@ -48,16 +51,16 @@ convert2sir_fun <- function(df, n_cores = detectCores() - 1) {
 
     intrinsic_status <- as.character(mo_is_intrinsic_resistant(bacteria, ab = drug_code))
 
-    sub_df[["interpreted_res"]] <- interpreted
+    sub_df[["interpreted_res"]] <- as.character(interpreted)
     sub_df[["intrinsic_res_status"]] <- intrinsic_status
 
     sub_df
   })
 
-  stopCluster(cl)
+  stopCluster(cl1)
 
   dplyr::bind_rows(res_list)
-}
+  }
 
 #------------------------------------------------------------------------------------------------
 
@@ -87,7 +90,7 @@ indiv_ab_resistance <- function(df,path,path_par,...){
   #Analysis by period
   #yr
 
-  if (y==unique(an_df_long$yr)[1]){
+  if (y==unique(data_yrs$yr)[1]){
   hold_df <- df %>%
     filter(mo_organism==org_name) %>%
     group_by(mo_organism, get(par_var_name), ab, yr) %>%
@@ -147,7 +150,7 @@ indiv_ab_resistance <- function(df,path,path_par,...){
 
 overall_ab_resistance <- function(df,path,path_par, ...){
 
-  if (y==unique(an_df_long$yr)[1]){   #this should be done once per session so it will be on the first year
+  if (y==unique(data_yrs$yr)[1]){   #this should be done once per session so it will be on the first year
   hold_df <- df %>%
     filter(mo_organism==org_name& yr==y) %>%
     #filter(ab %in% sel_abs) %>%
@@ -238,7 +241,7 @@ indiv_ab_resistance_sau <- function(df, path,path_par,...){
   hold_df <- bind_rows(hold_df_a, hold_df_mrsa)
 
 
-  if (y==unique(an_df_long$yr)[1]){
+  if (y==unique(data_yrs$yr)[1]){
   #plots
   ##preseving the empty cols for plotting equal bars
   hold_df <-  hold_df %>% filter(n>29) %>%
@@ -355,7 +358,7 @@ indiv_ab_resistance_sau <- function(df, path,path_par,...){
 
 overall_ab_resistance_sau <- function(df, path,path_par,...){
 
-  if (y==unique(an_df_long$yr)[1]){
+  if (y==unique(data_yrs$yr)[1]){
 
   hold_df_mrsa <- df %>%
     filter(mo_organism==org_name& yr==y) %>%
@@ -475,7 +478,7 @@ indiv_ab_resistance_genus <- function(df,path,path_par, ...){
 
     write.csv(hold_df, file.path(org_res_dir_par,paste0(cntry,'_',org_name,'_',par,'.csv')))
 
-    if (y==unique(an_df_long$yr)[1]){
+    if (y==unique(data_yrs$yr)[1]){
     #plots
     ##preseving the empty cols for plotting equal bars
     hold_df <-  hold_df %>% filter(n>29) %>%
@@ -554,7 +557,7 @@ indiv_ab_resistance_genus <- function(df,path,path_par, ...){
 
 overall_ab_resistance_genus <- function(df,path,path_par, ...){
 
-  if (y==unique(an_df_long$yr)[1]){
+  if (y==unique(data_yrs$yr)[1]){
 
     hold_df <- df %>%
       mutate(mo_organism=genus) %>%
@@ -653,7 +656,7 @@ antibiotic_classes_res_indiv <- function(df,path,path_par,...) {
   ggsave(file.path(org_res_dir_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.png')), indiv_ab_resistance_plot(hold_df), width=8, height=8, units="in", dpi=300)
 
 
-  if (y==unique(an_df_long$yr)[1]){
+  if (y==unique(data_yrs$yr)[1]){
   #calculating overall resistance
   hold_df <- df %>%
     filter(mo_organism==org_name & yr==y) %>%
@@ -807,7 +810,7 @@ antibiotic_classes_res_grp <- function(df,path,path_par, ...) {
   ggsave(file.path(org_res_dir_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.png')), indiv_ab_resistance_plot(hold_df), width=8, height=8, units="in", dpi=300)
 
 
-  if (y==unique(an_df_long$yr)[1]){
+  if (y==unique(data_yrs$yr)[1]){
 
   #calculating overall resistance
   hold_df <- df %>%
@@ -1173,6 +1176,9 @@ amr_individual_pathogens <-  function(xdf, org_res_dir,org_res_dir_par,org_name,
   #class resistance
   environment(antibiotic_classes_res_indiv) <- environment()
   antibiotic_classes_res_indiv(xdf,org_res_dir, org_res_dir_par,...)
+
+  if (exists("con") && inherits(con, "DBIConnection")) try(DBI::dbDisconnect(con), silent = TRUE)
+  invisible(NULL)
 }
 
 
@@ -1212,6 +1218,9 @@ amr_pathogen_groups <-  function(xdf,org_res_dir,org_res_dir_par, org_name, abs_
   #class resistance
   environment(antibiotic_classes_res_grp) <- environment()
   antibiotic_classes_res_grp(xdf,org_res_dir, org_res_dir_par, ...)
+
+  if (exists("con") && inherits(con, "DBIConnection")) try(DBI::dbDisconnect(con), silent = TRUE)
+  invisible(NULL)
 }
 
 
