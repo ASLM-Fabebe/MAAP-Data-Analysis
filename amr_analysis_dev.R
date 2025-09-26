@@ -69,10 +69,13 @@ ui <- fluidPage(
                  checkboxInput("completed_1", "I have completed this step"),
                  br(),
 
-                 # Bottom-right: Next
-                 fixedPanel(
-                   actionButton("next_1", "Next"),
-                   bottom = 10, right = 10, width = "auto"
+                 # Bottom-right: Next (shown only when completed)
+                 conditionalPanel(
+                   condition = "input.completed_1 == true",
+                   fixedPanel(
+                     actionButton("next_1", "Next"),
+                     bottom = 10, right = 10, width = "auto"
+                   )
                  )
 
                )
@@ -108,10 +111,13 @@ ui <- fluidPage(
                bottom = 10, left = 10, width = "auto"
              ),
 
-             # Bottom-right: Next
-             fixedPanel(
-               actionButton("next_2", "Next"),
-               bottom = 10, right = 10, width = "auto"
+             # Bottom-right: Next (shown only when completed)
+             conditionalPanel(
+               condition = "input.completed_2 == true",
+               fixedPanel(
+                 actionButton("next_2", "Next"),
+                 bottom = 10, right = 10, width = "auto"
+               )
              )
     ),
 
@@ -121,13 +127,13 @@ ui <- fluidPage(
 
              actionButton("run_script_3", "SIR Interpretations and Look up tables"),
              br(), br(),
-             verbatimTextOutput("console_3"),
+             shinycssloaders::withSpinner(verbatimTextOutput("console_3")),
              br(),
              #checkboxInput("sir", "SIR interpretations complete"),
              #br(),
 
              br(),br(), br(),
-             checkboxInput("completed_3", "I have completed this step"),
+             uiOutput("completed_3_ui"),
              br(),br(),
 
              # Bottom-left: Previous
@@ -136,10 +142,13 @@ ui <- fluidPage(
                bottom = 10, left = 10, width = "auto"
              ),
 
-             # Bottom-right: Next
-             fixedPanel(
-               actionButton("next_3", "Next"),
-               bottom = 10, right = 10, width = "auto"
+             # Bottom-right: Next (shown only when completed)
+             conditionalPanel(
+               condition = "input.completed_3 == true",
+               fixedPanel(
+                 actionButton("next_3", "Next"),
+                 bottom = 10, right = 10, width = "auto"
+               )
              )
     ),
 
@@ -155,11 +164,11 @@ ui <- fluidPage(
 
              actionButton("run_script_4", "Begin analysis"),
              br(), br(), br(),
-             verbatimTextOutput("console_4"),
+             shinycssloaders::withSpinner(verbatimTextOutput("console_4")),
 
              verbatimTextOutput("console_4"),
 
-             checkboxInput("completed_4", "I have completed this step"),
+             uiOutput("completed_4_ui"),
              br(), br(),
              # Bottom-left: Previous
              fixedPanel(
@@ -167,10 +176,13 @@ ui <- fluidPage(
                bottom = 10, left = 10, width = "auto"
              ),
 
-             # Bottom-right: Next
-             fixedPanel(
-               actionButton("next_4", "Next"),
-               bottom = 10, right = 10, width = "auto"
+             # Bottom-right: Next (shown only when completed)
+             conditionalPanel(
+               condition = "input.completed_4 == true",
+               fixedPanel(
+                 actionButton("next_4", "Next"),
+                 bottom = 10, right = 10, width = "auto"
+               )
              )
     ),
     #step_4
@@ -185,13 +197,22 @@ ui <- fluidPage(
              br(),br(),
              actionButton("run_script_5", "Begin analysis for WHO GLASS combos"),
              br(),br(), br(),
-             verbatimTextOutput("console_5"),
+             shinycssloaders::withSpinner(verbatimTextOutput("console_5")),
 
-             checkboxInput("completed_5", "I have completed this step"),
+             uiOutput("completed_5_ui"),
              # Bottom-left: Previous
              fixedPanel(
                actionButton("prev_5", "Previous"),
                bottom = 10, left = 10, width = "auto"
+             ),
+
+             # Bottom-right: Next (shown only when completed)
+             conditionalPanel(
+               condition = "input.completed_5 == true",
+               fixedPanel(
+                 actionButton("next_5", "Next"),
+                 bottom = 10, right = 10, width = "auto"
+               )
              )
     )
     #
@@ -254,6 +275,25 @@ server <- function(input, output, session) {
 
   # Step logs
   step_logs <- lapply(1:8, function(i) reactiveVal(""))
+
+  # Running flags for steps with long tasks
+  step3_running <- reactiveVal(FALSE)
+  step4_running <- reactiveVal(FALSE)
+  step5_running <- reactiveVal(FALSE)
+
+  # Completed UI rendering (hide while running)
+  output$completed_3_ui <- renderUI({
+    if (isTRUE(step3_running())) return(NULL)
+    checkboxInput("completed_3", "I have completed this step", value = isTRUE(input$completed_3))
+  })
+  output$completed_4_ui <- renderUI({
+    if (isTRUE(step4_running())) return(NULL)
+    checkboxInput("completed_4", "I have completed this step", value = isTRUE(input$completed_4))
+  })
+  output$completed_5_ui <- renderUI({
+    if (isTRUE(step5_running())) return(NULL)
+    checkboxInput("completed_5", "I have completed this step", value = isTRUE(input$completed_5))
+  })
 
   # ---- Step 1 ----
   output$table_1 <- renderRHandsontable({
@@ -379,13 +419,21 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$run_script_3, {
+    req(!step3_running())
+    step3_running(TRUE)
+    step_logs[[3]]("Running... please wait")
     df <- step3_data()
     script_file <- "amr_scripts/f2.R"
-    if(file.exists(script_file)) {
-      msg <- capture.output(tryCatch(source(script_file, local = .GlobalEnv),
-                                     error = function(e) cat("Error:", e$message)), type = "output")
-      step_logs[[3]](paste(msg, collapse="\n"))
-    } else step_logs[[3]]("No script found for Step 3")
+    tryCatch({
+      if(file.exists(script_file)) {
+        msg <- capture.output(source(script_file, local = .GlobalEnv), type = "output")
+        step_logs[[3]](paste(msg, collapse="\n"))
+      } else step_logs[[3]]("No script found for Step 3")
+    }, error = function(e) {
+      step_logs[[3]](paste0("Error: ", e$message))
+    }, finally = {
+      step3_running(FALSE)
+    })
     step3_data(df)
   })
   output$console_3 <- renderText({ step_logs[[3]]() })
@@ -425,13 +473,21 @@ server <- function(input, output, session) {
 
 
   observeEvent(input$run_script_4, {
+    req(!step4_running())
+    step4_running(TRUE)
+    step_logs[[4]]("Running... please wait")
     df <- step4_data()
     script_file <- "amr_scripts/f2a.R"
-    if(file.exists(script_file)) {
-      msg <- capture.output(tryCatch(source(script_file, local = .GlobalEnv),
-                                     error = function(e) cat("Error:", e$message)), type = "output")
-      step_logs[[4]](paste(msg, collapse="\n"))
-    } else step_logs[[4]]("No script found for Step 4")
+    tryCatch({
+      if(file.exists(script_file)) {
+        msg <- capture.output(source(script_file, local = .GlobalEnv), type = "output")
+        step_logs[[4]](paste(msg, collapse="\n"))
+      } else step_logs[[4]]("No script found for Step 4")
+    }, error = function(e) {
+      step_logs[[4]](paste0("Error: ", e$message))
+    }, finally = {
+      step4_running(FALSE)
+    })
     step3_data(df)
   })
   output$console_4 <- renderText({ step_logs[[4]]() })
@@ -457,13 +513,21 @@ server <- function(input, output, session) {
   })
   observe({ req(input$table_5); step5_data(hot_to_r(input$table_5)) })
   observeEvent(input$run_script_5, {
+    req(!step5_running())
+    step5_running(TRUE)
+    step_logs[[5]]("Running... please wait")
     df <- step5_data()
     script_file <- "amr_scripts/f3.R"  #bring in the corrections and do the conversions
-    if(file.exists(script_file)) {
-      msg <- capture.output(tryCatch(source(script_file, local = .GlobalEnv),
-                                     error = function(e) cat("Error:", e$message)), type = "output")
-      step_logs[[5]](paste(msg, collapse="\n"))
-    } else step_logs[[5]]("No script found for Step 5")
+    tryCatch({
+      if(file.exists(script_file)) {
+        msg <- capture.output(source(script_file, local = .GlobalEnv), type = "output")
+        step_logs[[5]](paste(msg, collapse="\n"))
+      } else step_logs[[5]]("No script found for Step 5")
+    }, error = function(e) {
+      step_logs[[5]](paste0("Error: ", e$message))
+    }, finally = {
+      step5_running(FALSE)
+    })
     step5_data(df)
   })
   output$console_5 <- renderText({ step_logs[[5]]() })
