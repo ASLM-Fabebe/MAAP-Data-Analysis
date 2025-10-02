@@ -66,6 +66,13 @@ chunk <- function(x, size=3000) {
 ##mics and diameters
 chunks <- chunk(famr_long_con$int_id, 3000)
 
+if (length(unlist(chunks))==0){
+  amr_con=NULL
+}else{
+
+message('Converting MICs and Disk measurements...')
+cat('Converting MICs and Disk measurements...\n')
+
 chunk_hold <- list()
 
 for (ch in 1:length(chunks)){
@@ -77,10 +84,19 @@ for (ch in 1:length(chunks)){
 }
 
 amr_con <- do.call('rbind', chunk_hold)
+}
+
 
 
 #interpretations (SIR)
 chunks <- chunk(famr_long_sir$int_id, 3000)
+
+if (length(unlist(chunks))==0){
+  amr_sir=NULL
+}else{
+
+  message('Validating your SIR interpretations...')
+  cat('Validating your SIR interpretations...\n')
 
 chunk_hold <- list()
 
@@ -88,11 +104,12 @@ for (ch in 1:length(chunks)){
 
   chunk_hold[[ch]] <- convert2sir_fun(famr_long_sir %>% filter(int_id %in% unlist(chunks[ch])))
 
-  message('Chunk....', ch, ' Interpretation completed, ', length(chunks)-ch, ' to go...')
-  cat('Chunk....', ch, ' Interpretation completed, ', length(chunks)-ch, ' to go...\n')
+  message('Chunk....', ch, ' Validation completed, ', length(chunks)-ch, ' to go...')
+  cat('Chunk....', ch, ' Validation completed, ', length(chunks)-ch, ' to go...\n')
 }
 
 amr_sir <- do.call('rbind', chunk_hold)
+}
 
 
 
