@@ -37,7 +37,6 @@ empty_amc_df <- data.frame(Required_variables=cols,
 
 
 # Match column classes of df2 to df1 and allow missing columns
-# Match column classes of df2 to df1 and allow missing columns
 
 # Match column classes of df2 to df1 and allow missing columns
 match_col_classes <- function(df1, df2) {
@@ -105,3 +104,4 @@ my_colors <- c(
   brewer.pal(8, "Set2"),
   brewer.pal(8, "Dark2")
 )
+

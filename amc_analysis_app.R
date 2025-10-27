@@ -77,12 +77,21 @@ ui <- fluidPage(
 
     # Step 3
     tabPanel("Step 3",
-             h3("Updated DDD Information"),
+             h4("Update DDD Information"),
 
              rHandsontableOutput("table_3"),
              br(),
              downloadButton("download_3", "Save Data"),
              helpText(paste0("Save in ", amc_updates_dir,"/")),
+             br(),br(),
+
+             h4("Match strength units"),
+
+             rHandsontableOutput("table_3a"),
+             br(),
+             downloadButton("download_3a", "Save Data"),
+             helpText(paste0("Save in ", amc_updates_dir,"/")),
+
 
              br(),br(),
              actionButton("run_script_3", "Subset the ineligible data"),
@@ -209,6 +218,7 @@ server <- function(input, output, session) {
   step1_data <- reactiveVal(empty_amc_df)
   step2_data <- reactiveVal(NULL)
   step3_data <- reactiveVal(NULL)
+ #step3_data <- reactiveVal(list( df1=ddd_updates,df2=units_updates))
   step4_data <- reactiveVal(NULL)
   step5_data <- reactiveVal(NULL)
   step6_data <- reactiveVal(NULL)
@@ -289,19 +299,99 @@ server <- function(input, output, session) {
 
 
   # ---- Step 3 lazy-load ----
+  # small helper to update one element of the list
+  set_step3 <- function(name, value) {
+    x <- step3_data()
+    x[[name]] <- value
+    step3_data(x)
+  }
+
+  #to run once the step is opened
+  make_step3 <- function() {
+       list(
+         df1=ddd_updates,df2=units_updates
+    )
+  }
+
   observeEvent(input$next_2, {
     if(isTRUE(input$completed_2)) {
       updateTabsetPanel(session, "steps", "Step 3")
-      step3_data(ddd_updates)  # Load only now
+
+      if (is.null(step3_data())) step3_data(make_step3())
     }
   })
+
+  #df1 data
+
   output$table_3 <- renderRHandsontable({
-    df <- step3_data()
-    req(df)
-    rhandsontable(df) %>%
-      hot_col("ATC level name", readOnly = TRUE, width = 300)
+
+    x <- step3_data(); req(!is.null(x))
+    df <- x$df1;        req(!is.null(df))
+
+    tbl <- rhandsontable(df)
+
+    # guard hot_col calls so there is no error if cols are missing
+    if ("atc_level_name" %in% names(df)) {
+      tbl <- hot_col(tbl, "atc_level_name", readOnly = TRUE, width = 300)
+    }
+    tbl
+
   })
-  observe({ req(input$table_3); step3_data(hot_to_r(input$table_3)) })
+
+
+  # capture edits for df1
+  observeEvent(input$table_3, ignoreInit = TRUE, {
+    set_step3("df1", hot_to_r(input$table_3))
+  })
+
+# observe({ req(input$table_3); step3_data(hot_to_r(input$table_3)) })
+  output$download_3 <- downloadHandler(
+    filename = "DDD_information_updates.xlsx",
+    content = function(file) {
+
+    x <- step3_data(); req(!is.null(x)); req(!is.null(x$df1))
+    writexl::write_xlsx(x$df1, path = file)
+    }
+  )
+
+  ##Df2
+  output$table_3a <- renderRHandsontable({
+    x <- step3_data(); req(!is.null(x))
+    df <- x$df2;        req(!is.null(df))
+
+    tbl <- rhandsontable(df)
+
+    # guard hot_col calls so there is no error if cols are missing
+    if ("strength_unit_in_dataset" %in% names(df)) {
+      tbl <- hot_col(tbl, "strength_unit_in_dataset", readOnly = TRUE, width = 300)
+    }
+
+    if ("standardized_units" %in% names(df)) {
+      tbl <- hot_col(tbl, "standardized_units", type = "dropdown", source = units_options, width = 200)
+    }
+    tbl
+
+  })
+
+
+# capture edits for df1
+observeEvent(input$table_3a, ignoreInit = TRUE, {
+  set_step3("df2", hot_to_r(input$table_3a))
+})
+
+# observe({ req(input$table_3); step3_data(hot_to_r(input$table_3)) })
+output$download_3a <- downloadHandler(
+  filename = "strength_units_updates.xlsx",
+  content = function(file) {
+
+    x <- step3_data(); req(!is.null(x)); req(!is.null(x$df1))
+    writexl::write_xlsx(x$df2, path = file)
+  }
+)
+
+
+
+
   observeEvent(input$run_script_3, {
     df <- step3_data()
     script_file <- "amc_scripts/f4.R"
@@ -313,8 +403,7 @@ server <- function(input, output, session) {
     step3_data(df)
   })
   output$console_3 <- renderText({ step_logs[[3]]() })
-  output$download_3 <- downloadHandler(filename = "DDD_information_updates.xlsx",
-                                       content = function(file) writexl::write_xlsx(step3_data(), file))
+
 
   # ---- Step 4 lazy-load ----
   observeEvent(input$next_3, {

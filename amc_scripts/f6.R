@@ -14,10 +14,11 @@ if (file.exists(file_path)) {
 
 amc_class_updates=bind_rows_match_classes(list(class_names,amc_class_updates%>%
                                                  mutate(updated_by='User'))) %>%
-  filter(!is.na(Class))
+  filter(!is.na(Class)) %>%
+  distinct(antibiotic_names, .keep_all = T)
 
 #update the original_file
-write_xlsx(amc_class_updates,'amc_resources/ab_class_updated.xlsx')
+write_xlsx(amc_class_updates,'amc_resources/ab_class_updated_b.xlsx')
 
 
 amc %>% left_join(amc_class_updates, by=('antibiotic_names')) %>%
@@ -32,7 +33,8 @@ amc %>% left_join(amc_class_updates, by=('antibiotic_names')) %>%
   group_by(year) %>%
   mutate(annual_totals=sum(tot_ddd),
          ddd_dist=round(tot_ddd*100/annual_totals,2),
-         class=factor(Class, levels=unique(.$Class))) %>%
+        # class=factor(Class, levels=unique(.$Class))
+        ) %>%
   arrange((ddd_dist)) %>%
   mutate( cum=cumsum(ddd_dist),
           midpoint=ddd_dist/2+lag(cum))-> class_temp
@@ -43,10 +45,12 @@ amc_cats_class <- bind_rows_match_classes(list(class_temp %>% filter(ddd_dist >=
                                         summarise(ddd_dist=sum(ddd_dist),
                                                   tot_did=sum(tot_did),
                                                   tot_ddd=sum(tot_ddd)) %>%
-                                        mutate(class='Others',
+                                        mutate(Class='Others',
+                                              # class=as.factor(class),
                                                midpoint=0)) ) %>%
   arrange(desc(ddd_dist)) %>%
-  mutate( class=factor(class, levels=unique(.$class)))
+  mutate( class=factor(Class, levels=c(unique(.$Class)[unique(.$Class) !='Others'], 'Others'))) %>%
+  filter(!is.na(class))
 
 #AWARe
 amc_cats_aware <- amc %>% left_join(amc_class_updates, by=('antibiotic_names')) %>%
@@ -60,8 +64,9 @@ amc_cats_aware <- amc %>% left_join(amc_class_updates, by=('antibiotic_names')) 
   group_by(year) %>%
   mutate(annual_totals=sum(tot_ddd),
          dist=round(tot_ddd*100/annual_totals,2),
-         aware_cats=factor(Category, levels=unique(.$Category))) %>%
-  arrange(desc(dist))
+         aware_cats=factor(Category, levels=c(unique(.$Category)[unique(.$Category) !='Others'], 'Others'))) %>%
+  arrange(desc(dist)) %>%
+  filter(!is.na(aware_cats))
 
 
 #for (y in unique(amc_cats_class$year)) {
@@ -99,7 +104,7 @@ ggsave(paste0(amc_dir_class,'/','AMC_classes.png'),plt_class_tot, width=8, heigh
 
 plt_class_sin <- ggplot(amc_cats_class#%>% filter(year==y)
                            , aes(x=class, y=tot_did, fill=as.factor(year)))+
-  geom_bar(stat = 'identity',  width=.8, position = position_dodge())+
+  geom_col(position= position_dodge2(width = 0.9, preserve = "single"))+
   labs(x='', y='DDD/1000 Inhabitants/day')+
   scale_fill_manual(values = my_colors) +
   theme_classic()+

@@ -5,34 +5,86 @@ message(paste("Analysis proceeding with",(length(unique(amc_r1$uid))- length(uni
 
 
 #calculating the consumption (DiD)
-amc1 <- amc_dataset1 %>% left_join(ddd_ref %>%
+
+#Part1 where masses are provided
+#part2 where unit doses are provided
+#part3 where international units are provided
+amc1_grams <- amc_dataset1 %>% left_join(ddd_ref %>%
                                      dplyr::select(-uid,-antibiotic_names, -antibiotic_molecules, -antibiotic_names_orig_order) %>%
                                      distinct(name_route, .keep_all=T), by='name_route') %>%
-  # filter(!is.na(`ATC code`)) %>%
+  left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
+   filter(grepl('gram', standardized_units)) %>%
   mutate(strength_unit=tolower(strength_unit),
          strength_unit=gsub('[-+_/,& )(;]','_',trimws(strength_unit)),
          strength_unit=str_split_i(strength_unit, '_',1),
 
          total=quantity*as.numeric(strength_val)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
-         total_g=ifelse(strength_unit=='mg', total/1000,
-                        ifelse(strength_unit=='mcg', total/1000000,
-                        ifelse(strength_unit=='ml', total/1000,
-                               ifelse(strength_unit=='g', total/1,
+         total_g=ifelse(standardized_units=='milligram', total/1000,
+                        ifelse(standardized_units=='microgram', total/1000000,
+                        ifelse(standardized_units=='millilitre', total/1000,
+                               ifelse(standardized_units=='gram', total/1,
                                       NA)))),
          ddd_equivalent=total_g/as.numeric(DDD),
+         ddd_equivalent=ifelse(Unit=='mg', ddd_equivalent/1000, ddd_equivalent),
          year=as.numeric(format(date,'%Y')),
          y_month=format(as.Date(date), "%Y-%m"),
-         y_month_date=as.Date(as.yearmon(y_month)),
+         y_month_date=ifelse(nrow(.)>0, as.Date(as.yearmon(y_month)),as.character(y_month)),
          aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats)) #%>%
+
+amc1_unitdose <- amc_dataset1 %>% left_join(ddd_ref %>%
+                                           dplyr::select(-uid,-antibiotic_names, -antibiotic_molecules, -antibiotic_names_orig_order) %>%
+                                           distinct(name_route, .keep_all=T), by='name_route') %>%
+  left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
+  filter(grepl('dose', standardized_units)) %>%
+  mutate(strength_unit=tolower(strength_unit),
+         strength_unit=gsub('[-+_/,& )(;]','_',trimws(strength_unit)),
+         strength_unit=str_split_i(strength_unit, '_',1) ,
+
+         total=quantity*as.numeric(strength_val)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
+
+         ddd_equivalent=total/as.numeric(DDD),
+         year=as.numeric(format(date,'%Y')),
+         y_month=format(as.Date(date), "%Y-%m"),
+         y_month_date=ifelse(nrow(.)>1, as.Date(as.yearmon(y_month)),as.character(y_month)),
+         aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats))
+
+amc1_mu <- amc_dataset1 %>% left_join(ddd_ref %>%
+                                              dplyr::select(-uid,-antibiotic_names, -antibiotic_molecules, -antibiotic_names_orig_order) %>%
+                                              distinct(name_route, .keep_all=T), by='name_route') %>%
+  left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
+  filter(grepl('units', standardized_units)&Unit=='MU') %>%
+  mutate(strength_unit=tolower(strength_unit),
+         strength_unit=gsub('[-+_/,& )(;]','_',trimws(strength_unit)),
+         strength_unit=str_split_i(strength_unit, '_',1) ,
+
+         total=quantity*as.numeric(strength_val)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
+
+         ddd_equivalent=total/as.numeric(DDD),
+         year=as.numeric(format(date,'%Y')),
+         y_month=format(as.Date(date), "%Y-%m"),
+         y_month_date=ifelse(nrow(.)>0, as.Date(as.yearmon(y_month)),as.character(y_month)),
+         aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats))
+
+
+dfs_amc1 <- list(
+  if (nrow(amc1_grams) > 0) amc1_grams else NULL,
+  if (nrow(amc1_mu) > 0) amc1_mu else NULL,
+  if (nrow(amc1_unitdose) > 0) amc1_unitdose else NULL
+)
+
+amc1 <- Reduce(bind_rows, dfs_amc1)%>%
+  dplyr::select(antibiotic_names,name_route, route,antibiotic_molecules, total_g, DDD, ddd_equivalent, year,y_month)
 
 #continue here
 #ddd for the inhibitors
-amc2 <- amc_dataset_inhibitors %>% left_join(ddd_ref %>%
+amc2_grams <- amc_dataset_inhibitors %>% left_join(ddd_ref %>%
                                                dplyr::select(-uid,-antibiotic_names, -antibiotic_molecules, -antibiotic_names_orig_order) %>%
                                                distinct(name_route, .keep_all=T), by='name_route') %>%
+  left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
+  filter(grepl('gram', standardized_units)) %>%
   # filter(!is.na(`ATC code`)) %>%
   mutate(#strength_unit=str_split_i(strength_unit_r , "(/)", 1), #strength unit
-    strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
+    #strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
 
          strength_div_factor1=str_split_i(strength_unit_r , "(/)",2),
          strength_div_factor_val1=str_split_i(strength_div_factor1 , "([A-Za-z]+)",1),
@@ -42,26 +94,99 @@ amc2 <- amc_dataset_inhibitors %>% left_join(ddd_ref %>%
 
          strength_val1=gsub('[-+_/,& )(]','_',trimws(strength_val)),
          strength_val1=str_split_i(strength_val1, '_',1),
+
          total=quantity*as.numeric(strength_val1)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
-         total_g=ifelse(strength_unit=='mg', total/1000,
-                        ifelse(strength_unit=='mcg', total/1000000,
-                               ifelse(strength_unit=='ml', total/1000,
-                                      ifelse(strength_unit=='g', total/1,
+         total_g=ifelse(standardized_units=='milligram', total/1000,
+                        ifelse(standardized_units=='microgram', total/1000000,
+                               ifelse(standardized_units=='millilitre', total/1000,
+                                      ifelse(standardized_units=='gram', total/1,
                                              NA)))),
          ddd_equivalent=total_g/as.numeric(DDD),
+         ddd_equivalent=ifelse(Unit=='mg', ddd_equivalent/1000, ddd_equivalent),
+
          year=as.numeric(format(date,'%Y')),
          y_month=format(as.Date(date), "%Y-%m"),
-         y_month_date=as.Date(as.yearmon(y_month)),
+         y_month_date=ifelse(nrow(.)>0, as.Date(as.yearmon(y_month)),as.character(y_month)),
          aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats))
 
 
+amc2_unitdose <- amc_dataset_inhibitors %>% left_join(ddd_ref %>%
+                                                        dplyr::select(-uid,-antibiotic_names, -antibiotic_molecules, -antibiotic_names_orig_order) %>%
+                                                        distinct(name_route, .keep_all=T), by='name_route') %>%
+  left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
+  filter(grepl('dose', standardized_units)) %>%
+  # filter(!is.na(`ATC code`)) %>%
+  mutate(#strength_unit=str_split_i(strength_unit_r , "(/)", 1), #strength unit
+    #strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
+
+    strength_div_factor1=str_split_i(strength_unit_r , "(/)",2),
+    strength_div_factor_val1=str_split_i(strength_div_factor1 , "([A-Za-z]+)",1),
+    strength_div_factor_val=ifelse(!is.na(strength_div_factor_val1), strength_div_factor_val1, strength_div_factor_val),
+    strength_div_factor_val=ifelse(is.na(strength_div_factor_val)|strength_div_factor_val=='' , 1, strength_div_factor_val),
+    strength_unit=tolower(strength_unit),
+
+    strength_val1=gsub('[-+_/,& )(]','_',trimws(strength_val)),
+    strength_val1=str_split_i(strength_val1, '_',1),
+
+    total=quantity*as.numeric(strength_val1)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
+
+    ddd_equivalent=total/as.numeric(DDD),
+
+    year=as.numeric(format(date,'%Y')),
+    y_month=format(as.Date(date), "%Y-%m"),
+    y_month_date=ifelse(nrow(.)>0, as.Date(as.yearmon(y_month)),as.character(y_month)),
+    aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats))
+
+amc2_mu <- amc_dataset_inhibitors %>% left_join(ddd_ref %>%
+                                                        dplyr::select(-uid,-antibiotic_names, -antibiotic_molecules, -antibiotic_names_orig_order) %>%
+                                                        distinct(name_route, .keep_all=T), by='name_route') %>%
+  left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
+  filter(grepl('units', standardized_units)&Unit=='MU') %>%
+  # filter(!is.na(`ATC code`)) %>%
+  mutate(#strength_unit=str_split_i(strength_unit_r , "(/)", 1), #strength unit
+    #strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
+
+    strength_div_factor1=str_split_i(strength_unit_r , "(/)",2),
+    strength_div_factor_val1=str_split_i(strength_div_factor1 , "([A-Za-z]+)",1),
+    strength_div_factor_val=ifelse(!is.na(strength_div_factor_val1), strength_div_factor_val1, strength_div_factor_val),
+    strength_div_factor_val=ifelse(is.na(strength_div_factor_val)|strength_div_factor_val=='' , 1, strength_div_factor_val),
+    strength_unit=tolower(strength_unit),
+
+    strength_val1=gsub('[-+_/,& )(]','_',trimws(strength_val)),
+    strength_val1=str_split_i(strength_val1, '_',1),
+
+    total=quantity*as.numeric(strength_val1)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
+
+    ddd_equivalent=total/as.numeric(DDD),
+
+    year=as.numeric(format(date,'%Y')),
+    y_month=format(as.Date(date), "%Y-%m"),
+    y_month_date=ifelse(nrow(.)>0, as.Date(as.yearmon(y_month)),as.character(y_month)),
+    aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats))
+
+  ##code if else to only merge dfs with data
+
+dfs_amc2 <- list(
+  if (nrow(amc2_grams) > 0) amc2_grams else NULL,
+  if (nrow(amc2_mu) > 0) amc2_mu else NULL,
+  if (nrow(amc2_unitdose) > 0) amc2_unitdose else NULL
+)
+
+amc2 <- Reduce(bind_rows, dfs_amc2) %>%
+  dplyr::select(antibiotic_names,name_route, route,antibiotic_molecules, total_g, DDD, ddd_equivalent, year,y_month)
+
+#continue here
+
+
 ##the combination prods
-amc3_1 <- amc_dataset_comb1 %>% filter(antibiotic_order==1) %>%
+amc3_1_grams <- amc_dataset_comb1 %>% filter(antibiotic_order==1) %>%
   left_join(ddd_ref %>%
               dplyr::select(-uid,-antibiotic_names, -antibiotic_molecules, -antibiotic_names_orig_order) %>%
               distinct(name_route, .keep_all=T), by='name_route') %>%
+  left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
+  filter(grepl('gram', standardized_units)) %>%
   mutate(#strength_unit=str_split_i(strength_unit_r , "(/)", 1), #strength unit
-    strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
+    #strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
          strength_div_factor1=str_split_i(strength_unit_r , "(/)",2),
          strength_div_factor_val1=str_split_i(strength_div_factor1 , "([A-Za-z]+)",1),
          strength_div_factor_val=ifelse(!is.na(strength_div_factor_val1), strength_div_factor_val1, strength_div_factor_val),
@@ -72,62 +197,240 @@ amc3_1 <- amc_dataset_comb1 %>% filter(antibiotic_order==1) %>%
     strength_unit=if_else(
       str_detect(strength_unit, "[0-9]+"),
       str_split_i(strength_unit, "([0-9]+)", 2),
-      strength_unit
-    ), #strength unit
+      strength_unit ), #strength unit
+    antibiotic_molecules=antibiotic_names_x1,
 
 
          strength_val1=gsub('[-+_/,& )(;]','_',trimws(strength_val)),
          strength_val1=str_split_i(strength_val1, '_',1),
+         #
          total=quantity*as.numeric(strength_val1)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
-         total_g=ifelse(strength_unit=='mg', total/1000,
-                        ifelse(strength_unit=='mcg', total/1000000,
-                               ifelse(strength_unit=='ml', total/1000,
-                                      ifelse(strength_unit=='g', total/1,
-                                             NA)))),
-         ddd_equivalent=total_g/as.numeric(DDD),
+    total_g=ifelse(standardized_units=='milligram', total/1000,
+                   ifelse(standardized_units=='microgram', total/1000000,
+                          ifelse(standardized_units=='millilitre', total/1000,
+                                 ifelse(standardized_units=='gram', total/1,
+                                        NA)))),
+    ddd_equivalent=total_g/as.numeric(DDD),
+    ddd_equivalent=ifelse(Unit=='mg', ddd_equivalent/1000, ddd_equivalent),
+
          year=as.numeric(format(date,'%Y')),
          y_month=format(as.Date(date), "%Y-%m"),
-         y_month_date=as.Date(as.yearmon(y_month)),
+    y_month_date=ifelse(nrow(.)>0, as.Date(as.yearmon(y_month)),as.character(y_month)),
          aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats))
 
 
-amc3_2 <- amc_dataset_comb1 %>% filter(antibiotic_order==2) %>%
+amc3_1_unitdose <- amc_dataset_comb1 %>% filter(antibiotic_order==1) %>%
   left_join(ddd_ref %>%
               dplyr::select(-uid,-antibiotic_names, -antibiotic_molecules, -antibiotic_names_orig_order) %>%
               distinct(name_route, .keep_all=T), by='name_route') %>%
+  left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
+  filter(grepl('dose', standardized_units)) %>%
   mutate(#strength_unit=str_split_i(strength_unit_r , "(/)", 1), #strength unit
-         strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
-         strength_div_factor1=str_split_i(strength_unit_r , "(/)",2),
-         strength_div_factor_val1=str_split_i(strength_div_factor1 , "([A-Za-z]+)",1),
-         strength_div_factor_val=ifelse(!is.na(strength_div_factor_val1), strength_div_factor_val1, strength_div_factor_val),
-         strength_div_factor_val=ifelse(is.na(strength_div_factor_val)|strength_div_factor_val=='' , 1, strength_div_factor_val),
-         strength_unit=tolower(strength_unit),
-         strength_unit=gsub('[-+_/,& )(;]','_',trimws(strength_unit)),
-         strength_unit=str_split_i(strength_unit, '_',1),
+    #strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
+    strength_div_factor1=str_split_i(strength_unit_r , "(/)",2),
+    strength_div_factor_val1=str_split_i(strength_div_factor1 , "([A-Za-z]+)",1),
+    strength_div_factor_val=ifelse(!is.na(strength_div_factor_val1), strength_div_factor_val1, strength_div_factor_val),
+    strength_div_factor_val=ifelse(is.na(strength_div_factor_val)|strength_div_factor_val=='' , 1, strength_div_factor_val),
+    strength_unit=tolower(strength_unit),
+    strength_unit=gsub('[-+_/,& )(;]','_',trimws(strength_unit)),
+    strength_unit=str_split_i(strength_unit, '_',1),
+    strength_unit=if_else(
+      str_detect(strength_unit, "[0-9]+"),
+      str_split_i(strength_unit, "([0-9]+)", 2),
+      strength_unit ), #strength unit
+    antibiotic_molecules=antibiotic_names_x1,
 
-         strength_val1=gsub('[-+_/,&)(;]','_',trimws(strength_val)),
-         strength_val1=str_split_i(strength_val1, '_',2),
-         total=quantity*as.numeric(strength_val1)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
-         total_g=ifelse(strength_unit=='mg', total/1000,
-                        ifelse(strength_unit=='mcg', total/1000000,
-                               ifelse(strength_unit=='ml', total/1000,
-                                      ifelse(strength_unit=='g', total/1,
-                                             NA)))),
-         ddd_equivalent=total_g/as.numeric(DDD),
-         year=as.numeric(format(date,'%Y')),
-         y_month=format(as.Date(date), "%Y-%m"),
-         y_month_date=as.Date(as.yearmon(y_month)),
-         aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats))
+
+    strength_val1=gsub('[-+_/,& )(;]','_',trimws(strength_val)),
+    strength_val1=str_split_i(strength_val1, '_',1),
+    #
+    total=quantity*as.numeric(strength_val1)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
+
+    ddd_equivalent=total/as.numeric(DDD),
+
+    year=as.numeric(format(date,'%Y')),
+    y_month=format(as.Date(date), "%Y-%m"),
+    y_month_date=ifelse(nrow(.)>0, as.Date(as.yearmon(y_month)),as.character(y_month)),
+    aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats))
+
+
+amc3_1_mu <- amc_dataset_comb1 %>% filter(antibiotic_order==1) %>%
+  left_join(ddd_ref %>%
+              dplyr::select(-uid,-antibiotic_names, -antibiotic_molecules, -antibiotic_names_orig_order) %>%
+              distinct(name_route, .keep_all=T), by='name_route') %>%
+  left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
+  filter(grepl('units', standardized_units)&Unit=='MU') %>%
+  mutate(#strength_unit=str_split_i(strength_unit_r , "(/)", 1), #strength unit
+    #strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
+    strength_div_factor1=str_split_i(strength_unit_r , "(/)",2),
+    strength_div_factor_val1=str_split_i(strength_div_factor1 , "([A-Za-z]+)",1),
+    strength_div_factor_val=ifelse(!is.na(strength_div_factor_val1), strength_div_factor_val1, strength_div_factor_val),
+    strength_div_factor_val=ifelse(is.na(strength_div_factor_val)|strength_div_factor_val=='' , 1, strength_div_factor_val),
+    strength_unit=tolower(strength_unit),
+    strength_unit=gsub('[-+_/,& )(;]','_',trimws(strength_unit)),
+    strength_unit=str_split_i(strength_unit, '_',1),
+    strength_unit=if_else(
+      str_detect(strength_unit, "[0-9]+"),
+      str_split_i(strength_unit, "([0-9]+)", 2),
+      strength_unit ), #strength unit
+    antibiotic_molecules=antibiotic_names_x1,
+
+
+    strength_val1=gsub('[-+_/,& )(;]','_',trimws(strength_val)),
+    strength_val1=str_split_i(strength_val1, '_',1),
+    #
+    total=quantity*as.numeric(strength_val1)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
+
+    ddd_equivalent=total/as.numeric(DDD),
+
+    year=as.numeric(format(date,'%Y')),
+    y_month=format(as.Date(date), "%Y-%m"),
+    y_month_date=ifelse(nrow(.)>0, as.Date(as.yearmon(y_month)),as.character(y_month)),
+    aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats))
+
+
+dfs_amc3_1 <- list(
+  if (nrow(amc3_1_grams) > 0) amc3_1_grams else NULL,
+  if (nrow(amc3_1_mu) > 0) amc3_1_mu else NULL,
+  if (nrow(amc3_1_unitdose) > 0) amc3_1_unitdose else NULL
+)
+
+amc3_1 <- Reduce(bind_rows, dfs_amc3_1) %>%
+  dplyr::select(antibiotic_names, route,name_route,antibiotic_molecules, total_g, DDD, ddd_equivalent, year,y_month)
+
+
+
+##
+
+amc3_2_grams <- amc_dataset_comb1 %>% filter(antibiotic_order==2) %>%
+  left_join(ddd_ref %>%
+              dplyr::select(-uid,-antibiotic_names, -antibiotic_molecules, -antibiotic_names_orig_order) %>%
+              distinct(name_route, .keep_all=T), by='name_route') %>%
+  left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
+  filter(grepl('gram', standardized_units)) %>%
+  mutate(#strength_unit=str_split_i(strength_unit_r , "(/)", 1), #strength unit
+    #strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
+    strength_div_factor1=str_split_i(strength_unit_r , "(/)",2),
+    strength_div_factor_val1=str_split_i(strength_div_factor1 , "([A-Za-z]+)",1),
+    strength_div_factor_val=ifelse(!is.na(strength_div_factor_val1), strength_div_factor_val1, strength_div_factor_val),
+    strength_div_factor_val=ifelse(is.na(strength_div_factor_val)|strength_div_factor_val=='' , 1, strength_div_factor_val),
+    strength_unit=tolower(strength_unit),
+    strength_unit=gsub('[-+_/,& )(;]','_',trimws(strength_unit)),
+    strength_unit=str_split_i(strength_unit, '_',2),
+    strength_unit=if_else(
+      str_detect(strength_unit, "[0-9]+"),
+      str_split_i(strength_unit, "([0-9]+)", 2),
+      strength_unit ), #strength unit
+    antibiotic_molecules=antibiotic_names_x1,
+
+
+    strength_val1=gsub('[-+_/,& )(;]','_',trimws(strength_val)),
+    strength_val1=str_split_i(strength_val1, '_',1),
+    #
+    total=quantity*as.numeric(strength_val1)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
+    total_g=ifelse(standardized_units=='milligram', total/1000,
+                   ifelse(standardized_units=='microgram', total/1000000,
+                          ifelse(standardized_units=='millilitre', total/1000,
+                                 ifelse(standardized_units=='gram', total/1,
+                                        NA)))),
+    ddd_equivalent=total_g/as.numeric(DDD),
+    ddd_equivalent=ifelse(Unit=='mg', ddd_equivalent/1000, ddd_equivalent),
+
+    year=as.numeric(format(date,'%Y')),
+    y_month=format(as.Date(date), "%Y-%m"),
+    y_month_date=ifelse(nrow(.)>0, as.Date(as.yearmon(y_month)),as.character(y_month)),
+    aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats))
+
+
+amc3_2_unitdose <- amc_dataset_comb1 %>% filter(antibiotic_order==2) %>%
+  left_join(ddd_ref %>%
+              dplyr::select(-uid,-antibiotic_names, -antibiotic_molecules, -antibiotic_names_orig_order) %>%
+              distinct(name_route, .keep_all=T), by='name_route') %>%
+  left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
+  filter(grepl('dose', standardized_units)) %>%
+  mutate(#strength_unit=str_split_i(strength_unit_r , "(/)", 1), #strength unit
+    #strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
+    strength_div_factor1=str_split_i(strength_unit_r , "(/)",2),
+    strength_div_factor_val1=str_split_i(strength_div_factor1 , "([A-Za-z]+)",1),
+    strength_div_factor_val=ifelse(!is.na(strength_div_factor_val1), strength_div_factor_val1, strength_div_factor_val),
+    strength_div_factor_val=ifelse(is.na(strength_div_factor_val)|strength_div_factor_val=='' , 1, strength_div_factor_val),
+    strength_unit=tolower(strength_unit),
+    strength_unit=gsub('[-+_/,& )(;]','_',trimws(strength_unit)),
+    strength_unit=str_split_i(strength_unit, '_',2),
+    strength_unit=if_else(
+      str_detect(strength_unit, "[0-9]+"),
+      str_split_i(strength_unit, "([0-9]+)", 2),
+      strength_unit ), #strength unit
+    antibiotic_molecules=antibiotic_names_x1,
+
+
+    strength_val1=gsub('[-+_/,& )(;]','_',trimws(strength_val)),
+    strength_val1=str_split_i(strength_val1, '_',1),
+    #
+    total=quantity*as.numeric(strength_val1)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
+
+    ddd_equivalent=total/as.numeric(DDD),
+
+    year=as.numeric(format(date,'%Y')),
+    y_month=format(as.Date(date), "%Y-%m"),
+    y_month_date=ifelse(nrow(.)>0, as.Date(as.yearmon(y_month)),as.character(y_month)),
+    aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats))
+
+
+amc3_2_mu <- amc_dataset_comb1 %>% filter(antibiotic_order==2) %>%
+  left_join(ddd_ref %>%
+              dplyr::select(-uid,-antibiotic_names, -antibiotic_molecules, -antibiotic_names_orig_order) %>%
+              distinct(name_route, .keep_all=T), by='name_route') %>%
+  left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
+  filter(grepl('units', standardized_units)&Unit=='MU') %>%
+  mutate(#strength_unit=str_split_i(strength_unit_r , "(/)", 1), #strength unit
+    #strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
+    strength_div_factor1=str_split_i(strength_unit_r , "(/)",2),
+    strength_div_factor_val1=str_split_i(strength_div_factor1 , "([A-Za-z]+)",1),
+    strength_div_factor_val=ifelse(!is.na(strength_div_factor_val1), strength_div_factor_val1, strength_div_factor_val),
+    strength_div_factor_val=ifelse(is.na(strength_div_factor_val)|strength_div_factor_val=='' , 1, strength_div_factor_val),
+    strength_unit=tolower(strength_unit),
+    strength_unit=gsub('[-+_/,& )(;]','_',trimws(strength_unit)),
+    strength_unit=str_split_i(strength_unit, '_',2),
+    strength_unit=if_else(
+      str_detect(strength_unit, "[0-9]+"),
+      str_split_i(strength_unit, "([0-9]+)", 2),
+      strength_unit ), #strength unit
+    antibiotic_molecules=antibiotic_names_x1,
+
+
+    strength_val1=gsub('[-+_/,& )(;]','_',trimws(strength_val)),
+    strength_val1=str_split_i(strength_val1, '_',1),
+    #
+    total=quantity*as.numeric(strength_val1)*as.numeric(pack_size_val)/as.numeric(strength_div_factor_val),
+
+    ddd_equivalent=total/as.numeric(DDD),
+
+    year=as.numeric(format(date,'%Y')),
+    y_month=format(as.Date(date), "%Y-%m"),
+    y_month_date=ifelse(nrow(.)>0, as.Date(as.yearmon(y_month)),as.character(y_month)),
+    aware_cats=ifelse(is.na(aware_cats), 'Uncategorized',aware_cats))
+
+
+dfs_amc3_2 <- list(
+  if (nrow(amc3_2_grams) > 0) amc3_2_grams else NULL,
+  if (nrow(amc3_2_mu) > 0) amc3_2_mu else NULL,
+  if (nrow(amc3_2_unitdose) > 0) amc3_2_unitdose else NULL
+)
+
+amc3_2 <- Reduce(bind_rows, dfs_amc3_2) %>%
+  dplyr::select(antibiotic_names, route,name_route,antibiotic_molecules, total_g, DDD, ddd_equivalent, year,y_month)
+
 
 ##To continue adding cleanup options
 #ddd for combinatio (separate the strengths)
 
 #combine the amc dataset
 
-amc <- Reduce(bind_rows, list(amc1 %>% dplyr::select(antibiotic_names, route,antibiotic_molecules, total_g, DDD, ddd_equivalent, year,y_month_date),
-                              amc2%>% dplyr::select(antibiotic_names, route,antibiotic_molecules, total_g, DDD, ddd_equivalent, year,y_month_date),
-                              amc3_1%>% dplyr::select(antibiotic_names, route,antibiotic_molecules=antibiotic_names_x1, total_g, DDD, ddd_equivalent, year,y_month_date),
-                              amc3_2%>% dplyr::select(antibiotic_names, route,antibiotic_molecules=antibiotic_names_x1, total_g, DDD, ddd_equivalent, year,y_month_date))) %>%
+amc <- Reduce(bind_rows, list(amc1,
+                              amc2,
+                              amc3_1,
+                              amc3_2 )) %>%
   filter(!is.na(ddd_equivalent))
 
 #subset million units also
@@ -167,7 +470,7 @@ amc_cats_molecule <- Reduce( rbind, list(molecule_temp %>% filter(ddd_dist >= 1)
                                                      tot_ddd=sum(tot_ddd)) %>%
                                            mutate(molecule='Others')) ) %>%
   arrange(desc(ddd_dist)) %>%
-  mutate( molecule=factor(molecule, levels=unique(.$molecule)))
+  mutate( molecule=factor(molecule, levels=c(unique(.$molecule)[unique(.$molecule) !='Others'], 'Others')))
 
 
 
@@ -210,7 +513,7 @@ ggsave(paste0(amc_dir_molecule,'/','AMC_molecules_DID.png'),plt_molecule_tot, wi
 
 plt_molecule_sin <- ggplot(amc_cats_molecule#%>% filter(year==y)
                            , aes(x=molecule, y=tot_did, fill=as.factor(year)))+
-  geom_bar(stat = 'identity',  width=.8, position = position_dodge())+
+  geom_col(position= position_dodge2(width = 0.9, preserve = "single"))+
   labs(x='', y='DDD/1000 Inhabitants/day')+
   scale_fill_manual(values = my_colors) +
   theme_classic()+
@@ -255,7 +558,8 @@ amc_cats_s_route <- Reduce( rbind, list(s_route_temp %>% filter(ddd_dist >= 1),
                                                     tot_ddd=sum(tot_ddd)) %>%
                                           mutate(s_route='Others')) ) %>%
   arrange(desc(ddd_dist)) %>%
-  mutate( s_route=factor(s_route, levels=unique(.$s_route)))
+  mutate( s_route=factor(s_route, levels=c(unique(.$s_route)[unique(.$s_route) !='Others'], 'Others'))) %>%
+  filter(!is.na(route))
 
 
 
@@ -283,7 +587,8 @@ ggsave(paste0(amc_dir_route,'/','AMC_s_routes_dist_DDD.png'),plt_s_route_dist, w
 
 plt_s_route_tot <- ggplot(amc_cats_s_route#%>% filter(year==y)
                           , aes(x=as.factor(year), y=tot_did, fill=route))+
-  geom_bar(stat = 'identity',  width=.8, position = position_dodge())+
+  geom_col(position= position_dodge2(width = 0.9, preserve = "single"))+
+  geom_label(aes(label=round(tot_did,1)), position= position_dodge2(width = 0.9, preserve = "single"), show.legend = F)+
   labs(x='', y='DDD/1000 Inhabitants/day')+
   scale_fill_manual(values = my_colors) +
   theme_classic()+
@@ -304,12 +609,12 @@ amc_dir_total <- file.path(cntry,"Results_AMC",'totals')
 if(!dir.exists(amc_dir_total)){dir.create(amc_dir_total, recursive = T)}
 
 
-amc %>% group_by(year, antibiotic_molecules) %>%
-  summarise(  tot_ddd=sum(ddd_equivalent)) %>%
-  ungroup() %>%
+amc %>% group_by(year) %>%
+  summarise(tot_ddd=sum(ddd_equivalent)) %>%
+ ## ungroup() %>%
   mutate(tot_did=tot_ddd*1000/365/pop) %>%
-  group_by(year) %>%
-  summarise(tot_did=mean(tot_did)) %>%
+  #group_by(year) %>%
+  #summarise(tot_did=mean(tot_did)) %>%
   arrange(desc(tot_did)) -> totals_temp
 
 
@@ -318,6 +623,7 @@ pd <- position_dodge2(width = 0.9, preserve = "single")
 plt_did_tot <- ggplot(totals_temp#%>% filter(year==y)
                       , aes(x=as.factor(year), y=tot_did))+
   geom_col(position = pd, fill='dodgerblue')+
+  geom_label(aes(label=round(tot_did,1)), position= position_dodge2(width = 0.9, preserve = "single"), show.legend = F)+
   labs(x='', y='Total DDD/1000 Inhabitants/day')+
   #scale_fill_manual(values = my_colors) +
   theme_classic()+
@@ -354,7 +660,7 @@ amc_dir_class <- file.path(cntry,"Results_AMC",'class')
 
 if(!dir.exists(amc_dir_class)){dir.create(amc_dir_class, recursive = T)}
 
-class_names <- read_excel('amc_resources/ab_class_updated.xlsx') %>%
+class_names <- read_excel('amc_resources/ab_class_updated_b.xlsx') %>%
   dplyr::select(antibiotic_names, Class, Category) %>% distinct(antibiotic_names, .keep_all = T)
 
 rearrange_words <- function(x, sep = ",") {

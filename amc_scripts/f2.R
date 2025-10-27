@@ -1,12 +1,9 @@
 ##Look up unclear entries
 cat('checking your dataset...\n')
 message('checking your dataset...')
+
+
 ###call and rename stuff
-
-#cntry=paste0(selected_country)
-#pop=paste0(selected_population)
-
-##create the results folder
 
 #create the results directory
 amc_dir <- file.path(cntry, "Results_AMC")
@@ -14,14 +11,10 @@ amc_dir <- file.path(cntry, "Results_AMC")
 if(!dir.exists(amc_dir)){dir.create(amc_dir, recursive = T)}
 
 
-
 cols_to_update <- read_excel(paste0(amc_updates_dir,"/select_amc_variables.xlsx"))
 
 # Perform renaming
 names(amc_raw)[names(amc_raw) %in% cols_to_update$Corresponding_variables] <- cols_to_update$Required_variables[match(names(amc_raw)[names(amc_raw) %in% cols_to_update$Corresponding_variables], cols_to_update$Corresponding_variables)]
-
-#Country code
-#cntry=cols_to_update$Country[1]
 
 
 #creating blank space holders for the unavailable cols
@@ -29,11 +22,7 @@ unavailable_cols=cols_to_update$Required_variables[cols_to_update$Corresponding_
 
 amc_raw[unavailable_cols]=NA
 
-#Population
-#pop=as.numeric(cols_to_update$Population[1])
 
-
-#
 antibiotic_classes_amc <- c(
   "Aminoglycosides",
   "Amphenicols",
@@ -85,9 +74,6 @@ antibiotic_classes_amc <- c(
   "Other antibacterials"
 )
 
-
-
-
 # Exclusion lists
 inhibitors <- c(
   "Clavulanic acid", "Sulbactam", "Tazobactam", "Avibactam",'clavulanic',
@@ -107,7 +93,9 @@ other_non_antibiotics <- c(
 exclude_extra <- tolower(c(inhibitors, other_non_antibiotics))
 
 #who ref
-ddd_ref <- read_excel('amc_resources/ab_molecules_amc.xlsx')
+ddd_ref <- read_excel('amc_resources/ab_molecules_amc.xlsx') %>%
+  mutate(name_route=tolower(name_route)) %>%
+  distinct(name_route, .keep_all = T)
 
 #atc molecules
 atcs_cleaned <- read_excel('amc_resources/ab_molecules.xlsx') %>%
@@ -117,7 +105,8 @@ atcs_cleaned <- read_excel('amc_resources/ab_molecules.xlsx') %>%
 # Clean ab dictionary
 antibiotics_mol_dict <- trimws(tolower(atcs_cleaned$original_entry))
 
-
+#strength units reference
+units_ref <- read_excel('amc_resources/strength_units_reference.xlsx')
 
 
 #load the dataset
@@ -127,59 +116,61 @@ amc_dir <- file.path(cntry, "Results_AMC")
 if(!dir.exists(amc_dir)){dir.create(amc_dir, recursive = T)}
 
 
-
-
 #importing the test dataset (focus is on non-combinational drugs)
 amc_test <- amc_raw %>%
+  #amc_raw_sub %>%
   tidyr::extract("product", c("product1", "strength1"), "(\\D*)(\\d.*)", remove = F) %>%   #separating product names from strength
-  tidyr::extract("pack_size", c("pack_size_unit1", "pack_size1"), "(\\D*)(\\d.*)") %>%   #separating product names from strength
+  tidyr::extract("pack_size", c("pack_size_unit1", "pack_size1"), "(\\D*)(\\d.*)") %>%   #separating packsize names from unit
   mutate(product = if_else(is.na(product1), product, product1),
 
+         #administration routes
          reported_route=route,
-         route=ifelse(str_detect(tolower(route), 'oral'),'o',           #administration routes
+         route=ifelse(str_detect(tolower(route), 'oral'),'o',
                       ifelse(str_detect( tolower(route), 'parenteral'),'p',
                              tolower(route))),
+
          #If liquid formulation parameters are provided, paste the columns
-         strength=ifelse(!is.na(volume_liquid_drugs), volume_liquid_drugs, strength),
+         strength=ifelse(!is.na(strength_liquid_drugs), strength_liquid_drugs, strength),
          strength_unit=ifelse(!is.na(strength_liquid_drugs), strength_liquid_drugs, strength_unit),
+
          #populating strength, packsize and units if not provided
          strength=ifelse(is.na(strength), strength1, strength),
 
          # name_route=paste0(trimws(product), '_', route),
-         strength_val=str_split_i(strength , "([A-Za-z]+)",1),   #strength integer
+         strength_val=str_split_i(strength , "([A-Za-z]+)",1),   #strength integer (account for e+ of the millions of international units later)
 
          strength_unit_r=substr(strength , nchar(strength_val)+1, 50), #strength unit
          strength_unit1=str_split_i(strength_unit_r , "(/)", 1), #strength unit
 
-         strength_unit=ifelse(is.na(strength_unit), strength_unit1, strength_unit),
+         strength_unit=tolower(ifelse(strength_unit1==''|is.na(strength_unit1), strength_unit, strength_unit1)),
 
          #numerator for liquids
-         strength_num_factor=str_split_i(strength_unit , "(/)",1),
-         strength_num_factor_val=str_split_i(strength_num_factor , "([A-Za-z]+)",1),
-         strength_num_factor_val=ifelse((strength_num_factor_val==""),1,strength_num_factor_val),
-         strength_val=as.numeric(strength_val)*as.numeric(strength_num_factor_val),
-         strength_unit=str_split_i((substr(strength_num_factor , nchar(strength_num_factor_val)+1, 50)),' ',1), #strength unit
-         #div factor
-         strength_div_factor=str_split_i(strength_unit , "(/)",2),
+         #strength_num_factor=str_split_i(strength_unit , "(/)",1),
+         #strength_num_factor_val=str_split_i(strength_num_factor , "([A-Za-z]+)",1),
+         # strength_num_factor_val=ifelse((strength_num_factor_val==""),1,strength_num_factor_val),
+         # strength_val=as.numeric(strength_val)*as.numeric(strength_num_factor_val),
+
+         # strength_unit=str_split_i((substr(strength_num_factor , nchar(strength_num_factor_val)+1, 50)),' ',1))#, #strength unit
+
+         # #div factor
+         strength_div_factor=str_split_i(strength_unit_r , "(/)",2),
          strength_div_factor_val=str_split_i(strength_div_factor , "([A-Za-z]+)",1),
-
-
          strength_div_factor_val=ifelse(is.na(strength_div_factor_val),1 , strength_div_factor_val),
          strength_div_factor_unit=substr(strength_div_factor , nchar(strength_div_factor_val)+1, 50),   #strength unit
          pack_size_val=str_split_i(pack_size1 , "([A-Za-z]+)",1),   #packsize integer)
-
+         #
          pack_unit1=substr(pack_size_unit1 , nchar(pack_size_val)+1, 50),
-
+         #
          pack_unit=ifelse(is.na(pack_size_unit), pack_unit1, pack_size_unit),
          id=1:nrow(.))
+
 
 
 #amc_ref=who_atc_ref
 
 amc_r1 <- amc_test %>%
   mutate(
-
-    antibiotic_copy=gsub('ampiclox','ampicillin and cloxacillin',tolower(product)),  #may also need to do this for amoxiclav
+    antibiotic_copy=gsub('ampiclox','ampicillin and cloxacillin',tolower(product)),
     antibiotic_copy=gsub('augmentin','amoxicillin and clavulanic acid',tolower(antibiotic_copy)),
     antibiotic_copy=gsub('[-+_/,& )(;]','_s_',tolower(antibiotic_copy)),
     antibiotic_copy=gsub(' and ','_s_',tolower(antibiotic_copy)),
@@ -187,7 +178,6 @@ amc_r1 <- amc_test %>%
   )
 
 ##taking care of date
-# Load AMC data sources ---------------------------------------------------
 
 safe_as_posix <- function(x, ...) {
   out <- tryCatch(as.POSIXct(x, ...), error = function(e) NA)
@@ -240,7 +230,7 @@ col_names <- paste0("x_name_part", seq_len(max_parts))
 
 amc_r1_match_prep <- amc_r1 %>% separate(antibiotic_copy, into = col_names, sep = "_s_", fill = "right")
 
-amc_r1_match_prep[col_names] <- lapply(amc_r1_match_prep[col_names], trimws)
+amc_r1_match_prep[col_names] <- lapply(amc_r1_match_prep[col_names], trimws)  #trimming the whitespace
 
 
 # Select columns starting with 'name'
@@ -294,8 +284,9 @@ lookup_df <- data.frame(
   antibiotic_name = tolower(antibiotic_names),  ##might change when we implement the dynamic changes from user input. Would need creation of a new column
 
   source='amr_package',
-  stringsAsFactors = FALSE
-) %>% mutate(antibiotic_name=gsub('/',',',antibiotic_name))
+  stringsAsFactors = FALSE) %>%
+  mutate(antibiotic_name=gsub('/',',',antibiotic_name),
+             Verdict='')
 
 
 # Create df for exact matches (name = original)
@@ -308,8 +299,8 @@ matches_df <- data.frame(
 
 
 # Combine both
-lookup_df <- lookup_df %>%
-  mutate(Verdict='')
+# lookup_df <- lookup_df %>%
+#   mutate()
 
 cat('Done!...')
 message('Done!...')
