@@ -118,7 +118,7 @@ ggsave(paste0(amc_dir_class,'/','AMC_single_classes.png'),plt_class_sin, width=8
 plt_aware_dist <- ggplot(amc_cats_aware %>% drop_na(aware_cats)#%>% filter(year==y)
                          , aes(x=as.factor(year), y=dist, fill=aware_cats))+
   geom_bar(stat = 'identity', width = 0.5)+
-  scale_fill_manual(values = my_colors) +
+  #scale_fill_manual(values = my_colors) +
   labs(x='Year', y='DDD Distribution (%)')+
   scale_fill_manual(values=c('Access'='seagreen',
                              'Watch'='chocolate1',
