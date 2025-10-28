@@ -120,6 +120,12 @@ plt_aware_dist <- ggplot(amc_cats_aware %>% drop_na(aware_cats)#%>% filter(year=
   geom_bar(stat = 'identity', width = 0.5)+
   scale_fill_manual(values = my_colors) +
   labs(x='Year', y='DDD Distribution (%)')+
+  scale_fill_manual(values=c('Access'='seagreen',
+                             'Watch'='chocolate1',
+                             'Reserve'='red',
+                             'Uncategorized'='dodgerblue1',
+                             'Not recommended'='purple3'
+                             ))+
   geom_label_repel(aes(label=dist, group=aware_cats),
                    position = position_stack(vjust = 0.5),
                    min.segment.length = 0,
