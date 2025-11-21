@@ -21,7 +21,9 @@ amc_class_updates=bind_rows_match_classes(list(class_names,amc_class_updates%>%
 write_xlsx(amc_class_updates,'amc_resources/ab_class_updated_b.xlsx')
 
 
-amc %>% left_join(amc_class_updates, by=('antibiotic_names')) %>%
+amc %>% left_join(amc_class_updates %>% mutate(antibiotic_names=tolower(antibiotic_names)) %>%
+                    distinct(antibiotic_names, .keep_all=T),
+                  by=('antibiotic_molecules'='antibiotic_names')) %>%
   filter(!is.na(Class)) %>%   ##continue here
   group_by(year, Class) %>%
   summarise(  tot_ddd=sum(ddd_equivalent)) %>%

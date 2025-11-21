@@ -11,7 +11,9 @@ amc_dir <- file.path(cntry, "Results_AMC")
 if(!dir.exists(amc_dir)){dir.create(amc_dir, recursive = T)}
 
 
-cols_to_update <- read_excel(paste0(amc_updates_dir,"/select_amc_variables.xlsx"))
+cols_to_update <- read_excel(paste0(amc_updates_dir,"/select_amc_variables.xlsx")) %>%
+  mutate(Corresponding_variables=ifelse(is.na(Corresponding_variables), 'not available', Corresponding_variables))  #user canjust leave unavailable columns blank
+
 
 # Perform renaming
 names(amc_raw)[names(amc_raw) %in% cols_to_update$Corresponding_variables] <- cols_to_update$Required_variables[match(names(amc_raw)[names(amc_raw) %in% cols_to_update$Corresponding_variables], cols_to_update$Corresponding_variables)]
@@ -21,6 +23,10 @@ names(amc_raw)[names(amc_raw) %in% cols_to_update$Corresponding_variables] <- co
 unavailable_cols=cols_to_update$Required_variables[cols_to_update$Corresponding_variables=='not available']
 
 amc_raw[unavailable_cols]=NA
+
+
+#solve when the quantity is already calculated
+#amc_raw <- amc_raw %>% mutate(pack_size=ifelse(length(!is.na(amc_raw$pack_size))==0, 1,pack_size))
 
 
 antibiotic_classes_amc <- c(
@@ -106,7 +112,7 @@ atcs_cleaned <- read_excel('amc_resources/ab_molecules.xlsx') %>%
 antibiotics_mol_dict <- trimws(tolower(atcs_cleaned$original_entry))
 
 #strength units reference
-units_ref <- read_excel('amc_resources/strength_units_reference.xlsx')
+units_ref <- read_excel('amc_resources/strength_units_updates_b.xlsx')
 
 
 #load the dataset
@@ -119,9 +125,11 @@ if(!dir.exists(amc_dir)){dir.create(amc_dir, recursive = T)}
 #importing the test dataset (focus is on non-combinational drugs)
 amc_test <- amc_raw %>%
   #amc_raw_sub %>%
+  mutate(product_string=gsub("[0-9]", "", product)) %>%
   tidyr::extract("product", c("product1", "strength1"), "(\\D*)(\\d.*)", remove = F) %>%   #separating product names from strength
   tidyr::extract("pack_size", c("pack_size_unit1", "pack_size1"), "(\\D*)(\\d.*)") %>%   #separating packsize names from unit
-  mutate(product = if_else(is.na(product1), product, product1),
+ # mutate(product = if_else(is.na(product1), product, product1),
+         mutate(product = product_string,
 
          #administration routes
          reported_route=route,
@@ -172,6 +180,7 @@ amc_r1 <- amc_test %>%
   mutate(
     antibiotic_copy=gsub('ampiclox','ampicillin and cloxacillin',tolower(product)),
     antibiotic_copy=gsub('augmentin','amoxicillin and clavulanic acid',tolower(antibiotic_copy)),
+    antibiotic_copy=gsub('cotrimox','trimethoprim and sulfamethoxazole ',tolower(antibiotic_copy)),
     antibiotic_copy=gsub('[-+_/,& )(;]','_s_',tolower(antibiotic_copy)),
     antibiotic_copy=gsub(' and ','_s_',tolower(antibiotic_copy)),
     uid=1:nrow(.)                                    #adding an identifer to sort out the mixed molecules

@@ -29,9 +29,9 @@ writexl::write_xlsx(ddd_ref_update, 'amc_resources/ab_molecules_amc.xlsx')
 file_path <- file.path(amc_updates_dir,'strength_units_updates.xlsx')
 
 if (file.exists(file_path)) {
-  unit_updates <- read.xlsx(file_path)  # or read.csv, fread, etc.
+  units_updates <- read.xlsx(file_path)  # or read.csv, fread, etc.
 } else {
-  unit_updates=unit_updates
+  units_updates=units_updates
   message("File not found — ddd_info_updates")
 }
 

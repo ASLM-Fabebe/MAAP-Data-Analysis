@@ -12,8 +12,12 @@ if (rstudioapi::isAvailable()) {
   folder_path=NA
 }
 
-
-input_file <- list.files(folder_path, pattern = "^AMC.*.xlsx")
+#importing files both xls or xlsx
+input_file <- list.files(
+  folder_path,
+  pattern = "^AMC.*\\.xls[x]?$",
+  ignore.case = TRUE
+)
 
 amc_raw <- readxl::read_excel(file.path(folder_path,input_file))
 
@@ -23,7 +27,6 @@ date_parse_vec = c("ymd HMS", "ymd HM", "mdy HMS", "dmy HMS", "ymd", "dmy", "mdy
 
 
 ###matching the cols
-# Sample vector
 choices1 <- c(names(amc_raw),'not available')  # Use your real variable
 
 
@@ -93,7 +96,6 @@ bind_rows_match_classes <- function(dfs) {
 }
 
 #create a folder to hold the temporary files
-#create the results directory
 amc_updates_dir <- file.path(folder_path, "analysis_updates")
 
 if(!dir.exists(amc_updates_dir)){dir.create(amc_updates_dir, recursive = T)}

@@ -83,7 +83,8 @@ amc2_grams <- amc_dataset_inhibitors %>% left_join(ddd_ref %>%
   left_join(units_ref_update , by=c('strength_unit'='strength_unit_in_dataset')) %>%
   filter(grepl('gram', standardized_units)) %>%
   # filter(!is.na(`ATC code`)) %>%
-  mutate(#strength_unit=str_split_i(strength_unit_r , "(/)", 1), #strength unit
+
+   mutate(#strength_unit=str_split_i(strength_unit_r , "(/)", 1), #strength unit
     #strength_unit=str_split_i(strength_num_factor,' ',1), #strength unit
 
          strength_div_factor1=str_split_i(strength_unit_r , "(/)",2),

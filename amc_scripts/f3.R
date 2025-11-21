@@ -185,7 +185,7 @@ ddd_updates <- bind_rows_match_classes(list(ddd_updates, updates_comb)) %>%
   filter(!(atc_level_name %in% exclude_extra))
 
 ##the units to look up
-units_options <- c('milligram', 'gram', 'millions of international units', 'micrograms','unit dose', '' )
+units_options <- c('milligram', 'gram', 'millions of international units', 'international units', 'micrograms','unit dose', '')
 
 units_updates <- rbind(amc_dataset1 %>% distinct(strength_unit),
                        amc_dataset_inhibitors %>% distinct(strength_unit),
