@@ -1,8 +1,0 @@
-"","mo_organism","get(par_var_name)","ab","n","r","total_R","ab_name","var_name"
-"1","Morganella","ur","CAZ",18,6,0.333333333333333,"Ceftazidime","ur"
-"2","Morganella","ur","CIP",6,6,1,"Ciprofloxacin","ur"
-"3","Morganella","ur","CRO",18,4,0.222222222222222,"Ceftriaxone","ur"
-"4","Morganella","ur","CTX",2,2,1,"Cefotaxime","ur"
-"5","Morganella","ur","GEN",8,1,0.125,"Gentamicin","ur"
-"6","Morganella","ur","MEM",16,0,0,"Meropenem","ur"
-"7","Morganella","ur","SXT",2,2,1,"Trimethoprim/sulfamethoxazole","ur"

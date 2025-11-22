@@ -1,8 +1,0 @@
-"","mo_organism","get(par_var_name)","n","r","total_R","ab_name","var_name"
-"1","Staphylococcus aureus","<1",70,28,0.4,"MRSA","<1"
-"2","Staphylococcus aureus","1-4",124,64,0.516129032258065,"MRSA","1-4"
-"3","Staphylococcus aureus","5-19",46,22,0.478260869565217,"MRSA","5-19"
-"4","Staphylococcus aureus","20-49",68,46,0.676470588235294,"MRSA","20-49"
-"5","Staphylococcus aureus","50-64",58,20,0.344827586206897,"MRSA","50-64"
-"6","Staphylococcus aureus","65+",32,24,0.75,"MRSA","65+"
-"7","Staphylococcus aureus",NA,2,2,1,"MRSA",NA

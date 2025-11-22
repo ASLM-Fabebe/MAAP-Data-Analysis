@@ -1,7 +1,0 @@
-"","mo_organism","get(par_var_name)","ab","n","r","total_R","ab_name","var_name"
-"1","Enterococcus faecalis","f","AMP",2,0,0,"Ampicillin","f"
-"2","Enterococcus faecalis","f","CIP",10,2,0.2,"Ciprofloxacin","f"
-"3","Enterococcus faecalis","f","PEN",8,4,0.5,"Benzylpenicillin","f"
-"4","Enterococcus faecalis","m","AMP",14,4,0.285714285714286,"Ampicillin","m"
-"5","Enterococcus faecalis","m","CIP",12,2,0.166666666666667,"Ciprofloxacin","m"
-"6","Enterococcus faecalis","m","PEN",6,6,1,"Benzylpenicillin","m"
