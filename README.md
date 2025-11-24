@@ -112,7 +112,7 @@ This script analyzes Antimicrobial Use (AMU) data from healthcare facilities, pr
 - Antimicrobial utilization patterns (by class/molecule/route/AWaRe category)
 
 ```{r}
-{ source(file.path("scripts", "run_amu_analysis.R")); run_amu_analysis() }
+library(shiny); runApp('amu_app_dev.R')
 ```
 ## Outputs Created
 If the script runs successfully, the following outputs will be generated and saved in the plots_AMU folder:
