@@ -1,6 +1,3 @@
-# library(shiny)
-# library(rhandsontable)
-# library(writexl)
 
 source("amr_scripts/f1.R")
 
@@ -9,7 +6,9 @@ ui <- fluidPage(
 
   theme = shinytheme("cerulean"),
 
-  titlePanel("AMR Data Analysis - MAAP"),
+  titlePanel(
+    HTML('AMDataNet<sup style="font-size:50%;">AMR</sup>')
+  ),
 
   tabsetPanel(
     id = "steps",
@@ -21,7 +20,7 @@ ui <- fluidPage(
 
                # 🔹 faint logo
                tags$img(
-                 src = "logo.jpg",   # put logo.png in your www/ folder
+                 src = "logo.jpg",   # logo.png in your www/ folder
                  style = "
             opacity: 0.07;            /* faint transparency */
             position: absolute;
@@ -196,47 +195,7 @@ ui <- fluidPage(
                bottom = 10, left = 10, width = "auto"
              )
     )
-    #
-    # # Step 6
-    # tabPanel("Step 6",
-    #          h3("Step 6"),
-    #          actionButton("run_script_6", "Run Script"),
-    #          verbatimTextOutput("console_6"),
-    #          rHandsontableOutput("table_6"),
-    #          br(),
-    #          downloadButton("download_6", "Download Modified Data"),
-    #          br(),
-    #          actionButton("prev_6", "Previous"),
-    #          checkboxInput("completed_6", "I have completed this step"),
-    #          actionButton("next_6", "Next")
-    # ),
-    #
-    # # Step 7
-    # tabPanel("Step 7",
-    #          h3("Step 7"),
-    #          actionButton("run_script_7", "Run Script"),
-    #          verbatimTextOutput("console_7"),
-    #          rHandsontableOutput("table_7"),
-    #          br(),
-    #          downloadButton("download_7", "Download Modified Data"),
-    #          br(),
-    #          actionButton("prev_7", "Previous"),
-    #          checkboxInput("completed_7", "I have completed this step"),
-    #          actionButton("next_7", "Next")
-    # ),
-    #
-    # # Step 8
-    # tabPanel("Step 8",
-    #          h3("Step 8"),
-    #          actionButton("run_script_8", "Run Script"),
-    #          verbatimTextOutput("console_8"),
-    #          rHandsontableOutput("table_8"),
-    #          br(),
-    #          downloadButton("download_8", "Download Modified Data"),
-    #          br(),
-    #          actionButton("prev_8", "Previous"),
-    #          checkboxInput("completed_8", "I have completed this step")
-    # )
+
   )
 )
 
@@ -472,95 +431,6 @@ server <- function(input, output, session) {
   output$download_5 <- downloadHandler(filename = "matching_GLASS_specimen_types.xlsx",
                                        content = function(file) writexl::write_xlsx(step5_data(), file))
 
-
-  #
-  # # ---- Step 3 lazy-load ----
-  # observeEvent(input$next_2, {
-  #   if(isTRUE(input$completed_2)) {
-  #     updateTabsetPanel(session, "steps", "Step 3")
-  #     step3_data(ddd_updates)  # Load only now
-  #   }
-  # })
-  # output$table_3 <- renderRHandsontable({
-  #   df <- step3_data()
-  #   req(df)
-  #   rhandsontable(df) %>%
-  #     hot_col("ATC level name", readOnly = TRUE, width = 300)
-  # })
-  # observe({ req(input$table_3); step3_data(hot_to_r(input$table_3)) })
-  # observeEvent(input$run_script_3, {
-  #   df <- step3_data()
-  #   script_file <- "amc_scripts/f4.R"
-  #   if(file.exists(script_file)) {
-  #     msg <- capture.output(tryCatch(source(script_file, local = .GlobalEnv),
-  #                                    error = function(e) cat("Error:", e$message)), type = "output")
-  #     step_logs[[3]](paste(msg, collapse="\n"))
-  #   } else step_logs[[3]]("No script found for Step 3")
-  #   step3_data(df)
-  # })
-  # output$console_3 <- renderText({ step_logs[[3]]() })
-  # output$download_3 <- downloadHandler(filename = "DDD_information_updates.xlsx",
-  #                                      content = function(file) writexl::write_xlsx(step3_data(), file))
-  #
-  # # ---- Step 4 lazy-load ----
-  # observeEvent(input$next_3, {
-  #   if(isTRUE(input$completed_3)) {
-  #     updateTabsetPanel(session, "steps", "Step 4")
-  #     # Load step4 data only now
-  #     step4_data(ddd_updates)
-  #   }
-  # })
-  # output$table_4 <- renderRHandsontable({
-  #   df <- step4_data()
-  #   req(df)
-  #   rhandsontable(df)
-  # })
-  # observe({ req(input$table_4); step4_data(hot_to_r(input$table_4)) })
-  # observeEvent(input$run_script_4, {
-  #   df <- step4_data()
-  #   script_file <- "amc_scripts/f5.R"
-  #   if(file.exists(script_file)) {
-  #     msg <- capture.output(tryCatch(source(script_file, local = .GlobalEnv),
-  #                                    error = function(e) cat("Error:", e$message)), type = "output")
-  #     step_logs[[4]](paste(msg, collapse="\n"))
-  #   } else step_logs[[4]]("No script found for Step 4")
-  #   step4_data(df)
-  # })
-  # output$console_4 <- renderText({ step_logs[[4]]() })
-  # # output$download_4 <- downloadHandler(filename = "matching_unclear_antibiotic_entries.xlsx",
-  # #                                      content = function(file) writexl::write_xlsx(step4_data(), file))
-  #
-  # # ---- Step 5 lazy-load ----
-  # observeEvent(input$next_4, {
-  #   if(isTRUE(input$completed_4)) {
-  #     updateTabsetPanel(session, "steps", "Step 5")
-  #     # Load step5 data only now
-  #     step5_data(unclassified_abs)
-  #   }
-  # })
-  # output$table_5 <- renderRHandsontable({
-  #   df <- step5_data()
-  #   req(df)
-  #   rhandsontable(df) %>%
-  #     hot_col("Class", type = "dropdown", source = sort(antibiotic_classes_amc), width = 200) %>%
-  #     hot_col("Category", type = "dropdown", source = c(' ','Access','Watch', 'Reserve','Uncategorized'), width = 150) %>%
-  #     hot_col("antibiotic_names", readOnly = TRUE, width = 300)  # Optional: Make label column readonly
-  # })
-  # observe({ req(input$table_5); step5_data(hot_to_r(input$table_5)) })
-  # observeEvent(input$run_script_5, {
-  #   df <- step5_data()
-  #   script_file <- "amc_scripts/f6.R"
-  #   if(file.exists(script_file)) {
-  #     msg <- capture.output(tryCatch(source(script_file, local = .GlobalEnv),
-  #                                    error = function(e) cat("Error:", e$message)), type = "output")
-  #     step_logs[[5]](paste(msg, collapse="\n"))
-  #   } else step_logs[[5]]("No script found for Step 5")
-  #   step5_data(df)
-  # })
-  # output$console_5 <- renderText({ step_logs[[5]]() })
-  # output$download_5 <- downloadHandler(filename = "update_AMC_classes.xlsx",
-  #                                      content = function(file) writexl::write_xlsx(step5_data(), file))
-  #
 
   # Repeat for Step 3 to Step 8: lazy-load dataset only when next button is clicked
   #observeEvent(input$next_2, { if(isTRUE(input$completed_2)) { updateTabsetPanel(session, "steps", "Step 3"); step3_data(head(airquality,5)) }})

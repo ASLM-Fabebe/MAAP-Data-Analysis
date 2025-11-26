@@ -8,7 +8,9 @@ source("amc_scripts/f1.R")
 ui <- fluidPage(
   theme = shinytheme("cerulean"),
 
-  titlePanel("AMC Data Analysis - MAAP"),
+  titlePanel(
+    HTML('AMDataNet<sup style="font-size:50%;">AMC</sup>')
+  ),
 
   tabsetPanel(
     id = "steps",
@@ -168,46 +170,6 @@ ui <- fluidPage(
             # actionButton("next_5", "Next")
     )#,
 
-    # # Step 6
-    # tabPanel("Step 6",
-    #          h3("Step 6"),
-    #          actionButton("run_script_6", "Run Script"),
-    #          verbatimTextOutput("console_6"),
-    #          rHandsontableOutput("table_6"),
-    #          br(),
-    #          downloadButton("download_6", "Download Modified Data"),
-    #          br(),
-    #          actionButton("prev_6", "Previous"),
-    #          checkboxInput("completed_6", "I have completed this step"),
-    #          actionButton("next_6", "Next")
-    # ),
-    #
-    # # Step 7
-    # tabPanel("Step 7",
-    #          h3("Step 7"),
-    #          actionButton("run_script_7", "Run Script"),
-    #          verbatimTextOutput("console_7"),
-    #          rHandsontableOutput("table_7"),
-    #          br(),
-    #          downloadButton("download_7", "Download Modified Data"),
-    #          br(),
-    #          actionButton("prev_7", "Previous"),
-    #          checkboxInput("completed_7", "I have completed this step"),
-    #          actionButton("next_7", "Next")
-    # ),
-    #
-    # # Step 8
-    # tabPanel("Step 8",
-    #          h3("Step 8"),
-    #          actionButton("run_script_8", "Run Script"),
-    #          verbatimTextOutput("console_8"),
-    #          rHandsontableOutput("table_8"),
-    #          br(),
-    #          downloadButton("download_8", "Download Modified Data"),
-    #          br(),
-    #          actionButton("prev_8", "Previous"),
-    #          checkboxInput("completed_8", "I have completed this step")
-    # )
   )
 )
 
@@ -465,12 +427,7 @@ output$download_3a <- downloadHandler(
                                        content = function(file) writexl::write_xlsx(step5_data(), file))
 
 
-  # Repeat for Step 3 to Step 8: lazy-load dataset only when next button is clicked
-  #observeEvent(input$next_2, { if(isTRUE(input$completed_2)) { updateTabsetPanel(session, "steps", "Step 3"); step3_data(head(airquality,5)) }})
- # observeEvent(input$next_3, { if(isTRUE(input$completed_3)) { updateTabsetPanel(session, "steps", "Step 4"); step4_data(head(PlantGrowth,5)) }})
-
-
-  # Previous buttons
+   # Previous buttons
   observeEvent(input$prev_2, { updateTabsetPanel(session, "steps", "Step 1") })
   observeEvent(input$prev_3, { updateTabsetPanel(session, "steps", "Step 2") })
   observeEvent(input$prev_4, { updateTabsetPanel(session, "steps", "Step 3") })
@@ -479,8 +436,7 @@ output$download_3a <- downloadHandler(
   observeEvent(input$prev_7, { updateTabsetPanel(session, "steps", "Step 6") })
   #observeEvent(input$prev_8, { updateTabsetPanel(session, "steps", "Step 7") })
 
-  # ---- Step 3-8 handsontable and scripts (same as Step 2) ----
-  # Can replicate the Step 2 code for each step (table render, editing, run_script, download, console)
+
 }
 
 shinyApp(ui, server)
