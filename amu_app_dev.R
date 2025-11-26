@@ -121,6 +121,9 @@ ui <- fluidPage(
 
              rHandsontableOutput("table_4"),
              br(),
+             downloadButton("download_4", "Save Data"),
+             helpText(paste0("Save in ", amu_updates_dir,"/")),
+             br(),br(),
              #   downloadButton("download_4", "Download Modified Data"),
              #br(),br(),
              actionButton("run_script_4", "Begin analysis on the processed files"),
@@ -128,7 +131,7 @@ ui <- fluidPage(
              verbatimTextOutput("console_4"),
 
             # checkboxInput("completed_4", "I have completed this step"),
-             br(),
+             br(),br(),
              # Bottom-left: Previous
              fixedPanel(
                actionButton("prev_4", "Previous"),
@@ -412,14 +415,17 @@ server <- function(input, output, session) {
     if(isTRUE(input$completed_3)) {
       updateTabsetPanel(session, "steps", "Step 4")
       # Load step4 data only now
-      step4_data()
+      step4_data(analysis_options)
     }
   })
   output$table_4 <- renderRHandsontable({
     df <- step4_data()
     req(df)
-    rhandsontable(df)
+    rhandsontable(df) %>%
+      hot_col("variables_for_analysis", readOnly = TRUE, width = 300) %>%
+      hot_col("options_in_dataset", readOnly = TRUE, width = 150)  # Optional: Make label column readonly
   })
+
   observe({ req(input$table_4); step4_data(hot_to_r(input$table_4)) })
   observeEvent(input$run_script_4, {
     df <- step4_data()
@@ -432,7 +438,7 @@ server <- function(input, output, session) {
     step4_data(df)
   })
   output$console_4 <- renderText({ step_logs[[4]]() })
-  output$download_4 <- downloadHandler(filename = "matching_unclear_antibiotic_entries.xlsx",
+  output$download_4 <- downloadHandler(filename = "user_standardized_entries.xlsx",
                                        content = function(file) writexl::write_xlsx(step4_data(), file))
 
   # # ---- Step 5 lazy-load ----
