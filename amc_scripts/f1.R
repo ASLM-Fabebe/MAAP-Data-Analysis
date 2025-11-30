@@ -107,3 +107,5 @@ my_colors <- c(
   brewer.pal(8, "Dark2")
 )
 
+#user determined date placeholder
+user_added_date=""

@@ -24,9 +24,10 @@ unavailable_cols=cols_to_update$Required_variables[cols_to_update$Corresponding_
 
 amc_raw[unavailable_cols]=NA
 
+#adding the is.na
+amc_raw <- amc_raw %>% mutate(date=ifelse(all(is.na(date)),user_added_date, date), #fixes the lack od date column
+                              pack_size=ifelse(all(is.na(pack_size)),1, pack_size)) #solve when the quantity is already calculated, packsize is 1 so that the quantities are not overestimated
 
-#solve when the quantity is already calculated
-#amc_raw <- amc_raw %>% mutate(pack_size=ifelse(length(!is.na(amc_raw$pack_size))==0, 1,pack_size))
 
 
 antibiotic_classes_amc <- c(

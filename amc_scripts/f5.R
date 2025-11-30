@@ -3,7 +3,7 @@ cat(paste("Analysis proceeding with",(length(unique(amc_r1$uid))- length(unique(
 message('Beginning the analysis...')
 message(paste("Analysis proceeding with",(length(unique(amc_r1$uid))- length(unique(amc_dataset_comb2$uid))), 'records'))
 
-
+rm('antibiotic_names')
 #calculating the consumption (DiD)
 
 #Part1 where masses are provided
@@ -72,9 +72,18 @@ dfs_amc1 <- list(
   if (nrow(amc1_unitdose) > 0) amc1_unitdose else NULL
 )
 
-amc1 <- Reduce(bind_rows, dfs_amc1)%>%
-  dplyr::select(antibiotic_names,name_route, route,antibiotic_molecules, total_g, DDD, ddd_equivalent, year,y_month)
 
+##In case there are null defeats
+tmp <- purrr::compact(dfs_amc1) |>
+  purrr::reduce(dplyr::bind_rows, .init = NULL)
+
+if (!is.null(tmp) && nrow(tmp) > 0) {
+  amc1 <- tmp |>
+    dplyr::select(antibiotic_names, name_route, route, antibiotic_molecules,
+                  total_g, DDD, ddd_equivalent, year, y_month)
+} else {
+  amc1 <- NULL
+}
 #continue here
 #ddd for the inhibitors
 amc2_grams <- amc_dataset_inhibitors %>% left_join(ddd_ref %>%
@@ -173,9 +182,16 @@ dfs_amc2 <- list(
   if (nrow(amc2_unitdose) > 0) amc2_unitdose else NULL
 )
 
-amc2 <- Reduce(bind_rows, dfs_amc2) %>%
-  dplyr::select(antibiotic_names,name_route, route,antibiotic_molecules, total_g, DDD, ddd_equivalent, year,y_month)
+tmp <- purrr::compact(dfs_amc2) |>
+  purrr::reduce(dplyr::bind_rows, .init = NULL)
 
+if (!is.null(tmp) && nrow(tmp) > 0) {
+  amc2 <- tmp |>
+    dplyr::select(antibiotic_names, name_route, route, antibiotic_molecules,
+                  total_g, DDD, ddd_equivalent, year, y_month)
+} else {
+  amc2 <- NULL
+}
 #continue here
 
 
@@ -296,9 +312,16 @@ dfs_amc3_1 <- list(
   if (nrow(amc3_1_unitdose) > 0) amc3_1_unitdose else NULL
 )
 
-amc3_1 <- Reduce(bind_rows, dfs_amc3_1) %>%
-  dplyr::select(antibiotic_names, route,name_route,antibiotic_molecules, total_g, DDD, ddd_equivalent, year,y_month)
+tmp <- purrr::compact(dfs_amc3_1) |>
+  purrr::reduce(dplyr::bind_rows, .init = NULL)
 
+if (!is.null(tmp) && nrow(tmp) > 0) {
+  amc3_1 <- tmp |>
+    dplyr::select(antibiotic_names, name_route, route, antibiotic_molecules,
+                  total_g, DDD, ddd_equivalent, year, y_month)
+} else {
+  amc3_1 <- NULL
+}
 
 
 ##
@@ -419,20 +442,34 @@ dfs_amc3_2 <- list(
   if (nrow(amc3_2_unitdose) > 0) amc3_2_unitdose else NULL
 )
 
-amc3_2 <- Reduce(bind_rows, dfs_amc3_2) %>%
-  dplyr::select(antibiotic_names, route,name_route,antibiotic_molecules, total_g, DDD, ddd_equivalent, year,y_month)
+tmp <- purrr::compact(dfs_amc3_2) |>
+  purrr::reduce(dplyr::bind_rows, .init = NULL)
 
+if (!is.null(tmp) && nrow(tmp) > 0) {
+  amc3_2 <- tmp |>
+    dplyr::select(antibiotic_names, name_route, route, antibiotic_molecules,
+                  total_g, DDD, ddd_equivalent, year, y_month)
+} else {
+  amc3_2 <- NULL
+}
 
 ##To continue adding cleanup options
 #ddd for combinatio (separate the strengths)
 
 #combine the amc dataset
 
-amc <- Reduce(bind_rows, list(amc1,
-                              amc2,
-                              amc3_1,
-                              amc3_2 )) %>%
-  filter(!is.na(ddd_equivalent))
+amc_dfs <- list(amc1, amc2, amc3_1, amc3_2 )
+
+tmp <- purrr::compact(amc_dfs) |>
+  purrr::reduce(dplyr::bind_rows, .init = NULL)
+
+if (!is.null(tmp) && nrow(tmp) > 0) {
+  amc <- tmp |>
+    filter(!is.na(ddd_equivalent))
+} else {
+  amc <- NULL
+}
+
 
 #subset million units also
 
@@ -496,6 +533,8 @@ plt_molecule_dist <- ggplot(amc_cats_molecule,# %>% filter(year==y),
   theme_classic()+
   theme(legend.title = element_blank())
 
+
+write.csv(molecule_temp, paste0(amc_dir_molecule,'/','AMC_molecules_dist.csv'))
 ggsave(paste0(amc_dir_molecule,'/','AMC_molecules_dist_DDD.png'),plt_molecule_dist, width=8, height=8, units="in", dpi=300)
 
 #next the barplots for did
@@ -582,6 +621,8 @@ plt_s_route_dist <- ggplot(amc_cats_s_route #%>% filter(year==y),
   theme_classic()+
   theme(legend.title = element_blank())
 
+
+write.csv(s_route_temp, paste0(amc_dir_route,'/','AMC_route_dist.csv'))
 ggsave(paste0(amc_dir_route,'/','AMC_s_routes_dist_DDD.png'),plt_s_route_dist, width=8, height=8, units="in", dpi=300)
 
 #next the barplots for did
@@ -630,6 +671,7 @@ plt_did_tot <- ggplot(totals_temp#%>% filter(year==y)
   theme_classic()+
   theme(legend.title = element_blank())
 
+write.csv(totals_temp, paste0(amc_dir_total,'/','AMC_total_dist.csv'))
 ggsave(paste0(amc_dir_total,'/','AMC_Total_DID.png'),plt_did_tot, width=8, height=8, units="in", dpi=300)
 
 

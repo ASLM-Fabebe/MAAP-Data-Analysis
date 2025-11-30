@@ -89,6 +89,8 @@ plt_class_dist <- ggplot(amc_cats_class #%>% filter(year==y)
   theme_classic()+
   theme(legend.title = element_blank())
 
+
+write.csv(class_temp, paste0(amc_dir_class,'/','AMC_classes_dist.csv'))
 ggsave(paste0(amc_dir_class,'/','AMC_classes_dist.png'),plt_class_dist, width=8, height=8, units="in", dpi=300)
 
 #next the barplots for did
@@ -137,6 +139,7 @@ plt_aware_dist <- ggplot(amc_cats_aware %>% drop_na(aware_cats)#%>% filter(year=
   theme_classic()+
   theme(legend.title = element_blank())
 
+write.csv(amc_cats_aware, paste0(amc_dir,'/','AMC_AWARe_dist.csv'))
 ggsave(paste0(amc_dir,'/','AMC_aware.png'),plt_aware_dist, width=8, height=8, units="in", dpi=300)
 
 

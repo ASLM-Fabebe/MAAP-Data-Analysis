@@ -25,14 +25,33 @@ ui <- fluidPage(
              actionButton("reg_1", "Register Country & Population"),
              br(), br(),
              verbatimTextOutput("register_msg"),
-             br(),
+             br(),br(),
+
 
              rHandsontableOutput("table_1"),
              br(),
              downloadButton("download_1", "Save Data"),
              helpText(paste0("Save in ", amc_updates_dir,"/")),
 
-             br(),br(), br(),
+             br(),br(),
+
+             ## NEW SECTION for "no date column"
+             checkboxInput("no_date_col",
+                           "My dataset does not have a date column"),
+
+             conditionalPanel(
+               condition = "input.no_date_col == true",
+
+               textInput("last_year_date",
+                         "Enter last date of data year (e.g., 2024-12-31)"),
+
+               actionButton("reg_date", "Register Date"),
+               br(),
+               verbatimTextOutput("date_msg")
+             ),
+
+             br(),br(),
+
              actionButton("run_script_1", "Initiate Look up of unclear entries"),
              br(),br(), br(),
              verbatimTextOutput("console_1"),
@@ -213,8 +232,26 @@ server <- function(input, output, session) {
     })
   })
 
+  #date columns
+  observeEvent(input$reg_date, {
+    req(input$last_year_date)
+
+    assign("user_added_date", input$last_year_date, envir = .GlobalEnv)
+
+    # Validate the date
+    date_val <- try(as.Date(input$last_year_date), silent = TRUE)
+
+    if (inherits(date_val, "try-error") || is.na(date_val)) {
+      output$date_msg <- renderText("❌ Invalid date format. Use YYYY-MM-DD.")
+    } else {
+      output$date_msg <- renderText(
+        paste("✔️ Last date registered:", date_val)
+      )
+    }
+  })
 
   observe({ req(input$table_1); step1_data(hot_to_r(input$table_1)) })
+
   observeEvent(input$run_script_1, {
     df <- step1_data()
     script_file <- "amc_scripts/f2.R"
