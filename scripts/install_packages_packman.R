@@ -38,18 +38,8 @@ pacman::p_load(
 )
 
 
-# if (!require("ComplexHeatmap", quietly = TRUE)){
-#   BiocManager::install("ComplexHeatmap")
-#   library(ComplexHeatmap)
-# }
-#
-#
-# if (!require("tidyHeatmap", quietly = TRUE)){
-#   install.packages("tidyHeatmap")
-#   library(tidyHeatmap)
-# }
-#
-# if (!require("ggtree", quietly = TRUE)){
-#   BiocManager::install("ggtree")
-#   library(ggtree)
-# }
+#suppress the warnings
+oldw <- getOption("warn")
+options(warn = -1)
+# code here
+options(warn = oldw)

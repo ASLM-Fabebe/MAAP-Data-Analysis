@@ -195,7 +195,7 @@ vars_fun <- c(
   "indiv_ab_resistance_genus", "overall_ab_resistance_genus",
   "antibiotic_classes_res_indiv", "antibiotic_classes_res_grp",
   "overall_resistance_plot","indiv_ab_resistance_plot",
-  "mrsa_analysis",
+  "mrsa_analysis",'data_yrs',
   "indiv_ab_resistance_plot_trends", "overall_resistance_plot_trends",
   "indiv_ab_resistance_plot_trends_quarter", "overall_resistance_plot_trends_quarter",
   "mkpath","parallel_guard"                 # SHINY: export the small helpers below

@@ -60,12 +60,12 @@ convert2sir_fun <- function(df, n_cores = detectCores() - 1) {
   stopCluster(cl1)
 
   dplyr::bind_rows(res_list)
-  }
+}
 
 #------------------------------------------------------------------------------------------------
 
 ##Resistance calculation functions
-indiv_ab_resistance <- function(df,path,path_par,...){
+indiv_ab_resistance <- function(df,path,path_par,org_res_dir_trends_par, org_res_dir_trends,...){
   hold_df <- df %>%
     filter(mo_organism==org_name & yr==y) %>%
     group_by(mo_organism, get(par_var_name), ab) %>%
@@ -91,118 +91,118 @@ indiv_ab_resistance <- function(df,path,path_par,...){
   #yr
 
   if (y==unique(data_yrs$yr)[1]){
-  hold_df <- df %>%
-    filter(mo_organism==org_name) %>%
-    group_by(mo_organism, get(par_var_name), ab, yr) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_name(ab),
-           var_name=`get(par_var_name)`)
+    hold_df <- df %>%
+      filter(mo_organism==org_name) %>%
+      group_by(mo_organism, get(par_var_name), ab, yr) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_name(ab),
+             var_name=`get(par_var_name)`)
 
-  write.csv(hold_df, file.path(org_res_dir_trends_par,paste0(cntry,'_',org_name,'_',par,'.csv')))
+    write.csv(hold_df, file.path(org_res_dir_trends_par,paste0(cntry,'_',org_name,'_',par,'.csv')))
 
-  #plots
-  ##preseving the empty cols for plotting equal bars
-  hold_df <-  hold_df %>% filter(n>29) %>%
-    filter(!is.na(var_name)) %>%
-    ungroup() %>%
-    complete(ab_name, var_name, fill = list(total_R = 0))%>%
-    mutate(.is_missing = total_R == 0,                # flagging the ghosts
-           n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
+    #plots
+    ##preseving the empty cols for plotting equal bars
+    hold_df <-  hold_df %>% filter(n>29) %>%
+      filter(!is.na(var_name)) %>%
+      ungroup() %>%
+      complete(ab_name, var_name, fill = list(total_R = 0))%>%
+      mutate(.is_missing = total_R == 0,                # flagging the ghosts
+             n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
 
-  ggsave(file.path(org_res_dir_trends_par,paste0(cntry,'_',org_name,par,'_individual_abs','.png')), indiv_ab_resistance_plot_trends(hold_df), width=8, height=8, units="in", dpi=300)
+    ggsave(file.path(org_res_dir_trends_par,paste0(cntry,'_',org_name,par,'_individual_abs','.png')), indiv_ab_resistance_plot_trends(hold_df), width=8, height=8, units="in", dpi=300)
 
-  #Quarters
-  hold_df <- df %>%
-    filter(mo_organism==org_name) %>%
-    group_by(mo_organism, get(par_var_name), ab, yr_quarter) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_name(ab),
-           var_name=`get(par_var_name)`)
+    #Quarters
+    hold_df <- df %>%
+      filter(mo_organism==org_name) %>%
+      group_by(mo_organism, get(par_var_name), ab, yr_quarter) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_name(ab),
+             var_name=`get(par_var_name)`)
 
-  quarter_dir_par <- file.path(dirname(org_res_dir_trends_par),'Quarters')
-  if(!dir.exists(quarter_dir_par)){dir.create(quarter_dir_par, recursive = T)}
+    quarter_dir_par <- file.path(dirname(org_res_dir_trends_par),'Quarters')
+    if(!dir.exists(quarter_dir_par)){dir.create(quarter_dir_par, recursive = T)}
 
-  write.csv(hold_df, file.path(quarter_dir_par,paste0(cntry,'_',org_name,'_',par,'.csv')))
+    write.csv(hold_df, file.path(quarter_dir_par,paste0(cntry,'_',org_name,'_',par,'.csv')))
 
-  #plots
-  ##preseving the empty cols for plotting equal bars
-  hold_df <-  hold_df %>% filter(n>29) %>%
-    filter(!is.na(var_name)) %>%
-    ungroup() %>%
-    complete(ab_name, var_name, fill = list(total_R = 0))%>%
-    mutate(.is_missing = total_R == 0,                # flagging the ghosts
-           n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
+    #plots
+    ##preseving the empty cols for plotting equal bars
+    hold_df <-  hold_df %>% filter(n>29) %>%
+      filter(!is.na(var_name)) %>%
+      ungroup() %>%
+      complete(ab_name, var_name, fill = list(total_R = 0))%>%
+      mutate(.is_missing = total_R == 0,                # flagging the ghosts
+             n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
 
-  ggsave(file.path(quarter_dir_par,paste0(cntry,'_',org_name,par,'_individual_abs','.png')), indiv_ab_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
+    ggsave(file.path(quarter_dir_par,paste0(cntry,'_',org_name,par,'_individual_abs','.png')), indiv_ab_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
 
 
-   }else{NULL}
+  }else{NULL}
 
 
 
   #trend end
-  }
+}
 
 
-overall_ab_resistance <- function(df,path,path_par, ...){
+overall_ab_resistance <- function(df,path,path_par, org_res_dir_trends, ...){
 
   if (y==unique(data_yrs$yr)[1]){   #this should be done once per session so it will be on the first year
-  hold_df <- df %>%
-    filter(mo_organism==org_name& yr==y) %>%
-    #filter(ab %in% sel_abs) %>%
-    group_by( ab) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_name(ab))
+    hold_df <- df %>%
+      filter(mo_organism==org_name& yr==y) %>%
+      #filter(ab %in% sel_abs) %>%
+      group_by( ab) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_name(ab))
 
-  write.csv(hold_df, file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_abs.csv')))
-#plot
-  ggsave(file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_abs','.png')), overall_resistance_plot(hold_df),
-         width=8, height=8, units="in", dpi=300)
+    write.csv(hold_df, file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_abs.csv')))
+    #plot
+    ggsave(file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_abs','.png')), overall_resistance_plot(hold_df),
+           width=8, height=8, units="in", dpi=300)
 
-  #Analysis by period
-  #yr
+    #Analysis by period
+    #yr
 
 
-  hold_df <- df %>%
-    filter(mo_organism==org_name) %>%
-    #filter(ab %in% sel_abs) %>%
-    group_by( ab, yr) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_name(ab),
-           n_lab=paste0('n=',n))
+    hold_df <- df %>%
+      filter(mo_organism==org_name) %>%
+      #filter(ab %in% sel_abs) %>%
+      group_by( ab, yr) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_name(ab),
+             n_lab=paste0('n=',n))
 
-  write.csv(hold_df, file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_abs.csv')))
-  #plot
-  ggsave(file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_abs','.png')), overall_resistance_plot_trends(hold_df),
-         width=8, height=8, units="in", dpi=300)
+    write.csv(hold_df, file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_abs.csv')))
+    #plot
+    ggsave(file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_abs','.png')), overall_resistance_plot_trends(hold_df),
+           width=8, height=8, units="in", dpi=300)
 
-  #Quarters
-  hold_df <- df %>%
-    filter(mo_organism==org_name) %>%
-    #filter(ab %in% sel_abs) %>%
-    group_by( ab, yr_quarter) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_name(ab),
-           n_lab=paste0('n=',n))
+    #Quarters
+    hold_df <- df %>%
+      filter(mo_organism==org_name) %>%
+      #filter(ab %in% sel_abs) %>%
+      group_by( ab, yr_quarter) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_name(ab),
+             n_lab=paste0('n=',n))
 
-  quarter_dir <- file.path(dirname(org_res_dir_trends),'Quarters')
-  if(!dir.exists(quarter_dir)){dir.create(quarter_dir, recursive = T)}
+    quarter_dir <- file.path(dirname(org_res_dir_trends),'Quarters')
+    if(!dir.exists(quarter_dir)){dir.create(quarter_dir, recursive = T)}
 
-  write.csv(hold_df, file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs.csv')))
-  #plot
-  ggsave(file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs','.png')), overall_resistance_plot_trends_quarter(hold_df),
-         width=8, height=8, units="in", dpi=300)
-  #end trend
+    write.csv(hold_df, file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs.csv')))
+    #plot
+    ggsave(file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs','.png')), overall_resistance_plot_trends_quarter(hold_df),
+           width=8, height=8, units="in", dpi=300)
+    #end trend
 
   }else{
     NULL
@@ -210,7 +210,7 @@ overall_ab_resistance <- function(df,path,path_par, ...){
 }
 
 
-indiv_ab_resistance_sau <- function(df, path,path_par,...){
+indiv_ab_resistance_sau <- function(df, path,path_par,org_res_dir_trends_par, org_res_dir_trends,...){
   hold_df_mrsa <- df %>%
     filter(mo_organism==org_name & yr==y) %>%
     filter(ab %in% mrsa_abs) %>%
@@ -242,243 +242,243 @@ indiv_ab_resistance_sau <- function(df, path,path_par,...){
 
 
   if (y==unique(data_yrs$yr)[1]){
-  #plots
-  ##preseving the empty cols for plotting equal bars
-  hold_df <-  hold_df %>% filter(n>29) %>%
-    filter(!is.na(var_name)) %>%
-    ungroup() %>%
-    complete(ab_name, var_name, fill = list(total_R = 0))%>%
-    mutate(.is_missing = total_R == 0)   # flagging the ghosts
+    #plots
+    ##preseving the empty cols for plotting equal bars
+    hold_df <-  hold_df %>% filter(n>29) %>%
+      filter(!is.na(var_name)) %>%
+      ungroup() %>%
+      complete(ab_name, var_name, fill = list(total_R = 0))%>%
+      mutate(.is_missing = total_R == 0)   # flagging the ghosts
 
-  ggsave(file.path(org_res_dir_par,paste0(cntry,'_',org_name,'_overall_abs','.png')), indiv_ab_resistance_plot(hold_df), width=8, height=8, units="in", dpi=300)
-
-
-  #*********analysis by period
-  #*yr
-  #*
-
-  hold_df_mrsa <- df %>%
-    filter(mo_organism==org_name) %>%
-    filter(ab %in% mrsa_abs) %>%
-    group_by(mo_organism, get(par_var_name), yr) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name='MRSA',
-           var_name=`get(par_var_name)`)
+    ggsave(file.path(org_res_dir_par,paste0(cntry,'_',org_name,'_overall_abs','.png')), indiv_ab_resistance_plot(hold_df), width=8, height=8, units="in", dpi=300)
 
 
-  write.csv(hold_df_mrsa, file.path(org_res_dir_trends_par,paste0('year_',cntry,'_',org_name,'_mrsa',par,'.csv')))
+    #*********analysis by period
+    #*yr
+    #*
+
+    hold_df_mrsa <- df %>%
+      filter(mo_organism==org_name) %>%
+      filter(ab %in% mrsa_abs) %>%
+      group_by(mo_organism, get(par_var_name), yr) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name='MRSA',
+             var_name=`get(par_var_name)`)
 
 
-  #other combos
-  hold_df_a <- df %>%
-    filter(mo_organism==org_name) %>%
-    filter(ab %in% sel_abs) %>%
-    group_by(mo_organism, get(par_var_name), ab, yr) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_name(ab),
-           var_name=`get(par_var_name)`)
-
-  write.csv(hold_df_a, file.path(org_res_dir_par,paste0('year_',cntry,'_',org_name,'_',par,'.csv')))
-
-  hold_df <- bind_rows(hold_df_a, hold_df_mrsa)
-
-  #plots
-  ##preseving the empty cols for plotting equal bars
-  hold_df <-  hold_df %>% filter(n>29) %>%
-    filter(!is.na(var_name)) %>%
-    ungroup() %>%
-    complete(ab_name, var_name, fill = list(total_R = 0))%>%
-    mutate(.is_missing = total_R == 0,   # flagging the ghosts
-           n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
-
-  ggsave(file.path(org_res_dir_trends,paste0('year_',cntry,'_',org_name,'_overall_abs','.png')),
-                indiv_ab_resistance_plot_trends(hold_df), width=8, height=8, units="in", dpi=300)
-
-  #Quarters
-  hold_df_mrsa <- df %>%
-    filter(mo_organism==org_name) %>%
-    filter(ab %in% mrsa_abs) %>%
-    group_by(mo_organism, get(par_var_name), yr_quarter) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name='MRSA',
-           var_name=`get(par_var_name)`)
-
-  quarter_dir_par <- file.path(dirname(org_res_dir_trends_par),'Quarters')
-  if(!dir.exists(quarter_dir_par)){dir.create(quarter_dir_par, recursive = T)}
+    write.csv(hold_df_mrsa, file.path(org_res_dir_trends_par,paste0('year_',cntry,'_',org_name,'_mrsa',par,'.csv')))
 
 
-  write.csv(hold_df_mrsa, file.path(quarter_dir_par,paste0('year_',cntry,'_',org_name,'_mrsa',par,'.csv')))
-
-
-  #other combos
-  hold_df_a <- df %>%
-    filter(mo_organism==org_name) %>%
-    filter(ab %in% sel_abs) %>%
-    group_by(mo_organism, get(par_var_name), ab, yr_quarter) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_name(ab),
-           var_name=`get(par_var_name)`)
-
-  quarter_dir_par <- file.path(dirname(org_res_dir_trends_par),'Quarters')
-  if(!dir.exists(quarter_dir_par)){dir.create(quarter_dir_par, recursive = T)}
-
-  write.csv(hold_df_a, file.path(quarter_dir_par,paste0('year_',cntry,'_',org_name,'_',par,'.csv')))
-
-  hold_df <- bind_rows(hold_df_a, hold_df_mrsa)
-
-  #plots
-  ##preseving the empty cols for plotting equal bars
-  hold_df <-  hold_df %>% filter(n>29) %>%
-    filter(!is.na(var_name)) %>%
-    ungroup() %>%
-    complete(ab_name, var_name, fill = list(total_R = 0))%>%
-    mutate(.is_missing = total_R == 0,   # flagging the ghosts
-           n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
-
-  quarter_dir <- file.path(dirname(org_res_dir_trends),'Quarters')
-  if(!dir.exists(quarter_dir)){dir.create(quarter_dir, recursive = T)}
-
-  ggsave(file.path(quarter_dir,paste0('year_',cntry,'_',org_name,'_overall_abs','.png')),
-         indiv_ab_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
-
-  }else{
-    NULL
-  }
-
-  #Trend end
-  }
-
-overall_ab_resistance_sau <- function(df, path,path_par,...){
-
-  if (y==unique(data_yrs$yr)[1]){
-
-  hold_df_mrsa <- df %>%
-    filter(mo_organism==org_name& yr==y) %>%
-    filter(ab %in% mrsa_abs) %>%
-    group_by( mo_organism) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name='MRSA')
-
-
-  write.csv(hold_df_mrsa, file.path(org_res_dir_par,paste0(cntry,'_',org_name,'mrsa_overall_abs.csv')))
-
-  #other combos
-  hold_df_a <- df %>%
-    filter(mo_organism==org_name & yr==y) %>%
-    group_by( ab) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_name(ab))
-
-
-  write.csv(hold_df_a, file.path(org_res_dir_par,paste0(cntry,'_',org_name,'_overall_abs.csv')))
-
-  hold_df <- bind_rows(hold_df_a, hold_df_mrsa)
-
-  #plots
-  ggsave(file.path(org_res_dir_par,paste0(cntry,'_',org_name,'_overall_abs','.png')), overall_resistance_plot(hold_df), width=8, height=8, units="in", dpi=300)
-
-
-  #*****Analysis by period
-  #*yr
-
-
-  hold_df_mrsa <- df %>%
-    filter(mo_organism==org_name) %>%
-    filter(ab %in% mrsa_abs) %>%
-    group_by( mo_organism, yr) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name='MRSA')
-
-
-  write.csv(hold_df_mrsa, file.path(org_res_dir_trends,paste0('year_',cntry,'_',org_name,'mrsa_overall_abs.csv')))
-
-  #other combos
-  hold_df_a <- df %>%
-    filter(mo_organism==org_name) %>%
-    group_by( ab,yr) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_name(ab))
-
-
-  write.csv(hold_df_a, file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_abs.csv')))
-
-  hold_df <- bind_rows(hold_df_a, hold_df_mrsa) %>%
-    mutate(n_lab=paste0('n=',n))
-
-  #plots
-  ggsave(file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_abs','.png')),
-         overall_resistance_plot_trends(hold_df), width=8, height=8, units="in", dpi=300)
-
-  #Quarters
-  hold_df_mrsa <- df %>%
-    filter(mo_organism==org_name) %>%
-    filter(ab %in% mrsa_abs) %>%
-    group_by( mo_organism, yr_quarter) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name='MRSA')
-
-  quarter_dir <- file.path(dirname(org_res_dir_trends),'Quarters')
-  if(!dir.exists(quarter_dir)){dir.create(quarter_dir, recursive = T)}
-
-  write.csv(hold_df_mrsa, file.path(quarter_dir,paste0('year_',cntry,'_',org_name,'mrsa_overall_abs.csv')))
-
-  #other combos
-  hold_df_a <- df %>%
-    filter(mo_organism==org_name) %>%
-    group_by( ab,yr_quarter) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_name(ab))
-
-
-  write.csv(hold_df_a, file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs.csv')))
-
-  hold_df <- bind_rows(hold_df_a, hold_df_mrsa)%>%
-    mutate(n_lab=paste0('n=',n))
-
-  #plots
-  ggsave(file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs','.png')),
-         overall_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
-  #trend end
-  }else{NULL
-    }
-  }
-
-  #pathogen groups
-indiv_ab_resistance_genus <- function(df,path,path_par, ...){
-    hold_df <- df %>%
-      mutate(mo_organism=genus ) %>%
+    #other combos
+    hold_df_a <- df %>%
+      filter(mo_organism==org_name) %>%
       filter(ab %in% sel_abs) %>%
-      filter(mo_organism==org_name & yr==y) %>%
-      group_by(mo_organism, get(par_var_name), ab) %>%
+      group_by(mo_organism, get(par_var_name), ab, yr) %>%
       summarise(n=n(),
                 r=sum(R),
                 total_R = r/n  ) %>%
       mutate(ab_name=ab_name(ab),
              var_name=`get(par_var_name)`)
 
-    write.csv(hold_df, file.path(org_res_dir_par,paste0(cntry,'_',org_name,'_',par,'.csv')))
+    write.csv(hold_df_a, file.path(org_res_dir_par,paste0('year_',cntry,'_',org_name,'_',par,'.csv')))
 
-    if (y==unique(data_yrs$yr)[1]){
+    hold_df <- bind_rows(hold_df_a, hold_df_mrsa)
+
+    #plots
+    ##preseving the empty cols for plotting equal bars
+    hold_df <-  hold_df %>% filter(n>29) %>%
+      filter(!is.na(var_name)) %>%
+      ungroup() %>%
+      complete(ab_name, var_name, fill = list(total_R = 0))%>%
+      mutate(.is_missing = total_R == 0,   # flagging the ghosts
+             n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
+
+    ggsave(file.path(org_res_dir_trends,paste0('year_',cntry,'_',org_name,'_overall_abs','.png')),
+           indiv_ab_resistance_plot_trends(hold_df), width=8, height=8, units="in", dpi=300)
+
+    #Quarters
+    hold_df_mrsa <- df %>%
+      filter(mo_organism==org_name) %>%
+      filter(ab %in% mrsa_abs) %>%
+      group_by(mo_organism, get(par_var_name), yr_quarter) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name='MRSA',
+             var_name=`get(par_var_name)`)
+
+    quarter_dir_par <- file.path(dirname(org_res_dir_trends_par),'Quarters')
+    if(!dir.exists(quarter_dir_par)){dir.create(quarter_dir_par, recursive = T)}
+
+
+    write.csv(hold_df_mrsa, file.path(quarter_dir_par,paste0('year_',cntry,'_',org_name,'_mrsa',par,'.csv')))
+
+
+    #other combos
+    hold_df_a <- df %>%
+      filter(mo_organism==org_name) %>%
+      filter(ab %in% sel_abs) %>%
+      group_by(mo_organism, get(par_var_name), ab, yr_quarter) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_name(ab),
+             var_name=`get(par_var_name)`)
+
+    quarter_dir_par <- file.path(dirname(org_res_dir_trends_par),'Quarters')
+    if(!dir.exists(quarter_dir_par)){dir.create(quarter_dir_par, recursive = T)}
+
+    write.csv(hold_df_a, file.path(quarter_dir_par,paste0('year_',cntry,'_',org_name,'_',par,'.csv')))
+
+    hold_df <- bind_rows(hold_df_a, hold_df_mrsa)
+
+    #plots
+    ##preseving the empty cols for plotting equal bars
+    hold_df <-  hold_df %>% filter(n>29) %>%
+      filter(!is.na(var_name)) %>%
+      ungroup() %>%
+      complete(ab_name, var_name, fill = list(total_R = 0))%>%
+      mutate(.is_missing = total_R == 0,   # flagging the ghosts
+             n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
+
+    quarter_dir <- file.path(dirname(org_res_dir_trends),'Quarters')
+    if(!dir.exists(quarter_dir)){dir.create(quarter_dir, recursive = T)}
+
+    ggsave(file.path(quarter_dir,paste0('year_',cntry,'_',org_name,'_overall_abs','.png')),
+           indiv_ab_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
+
+  }else{
+    NULL
+  }
+
+  #Trend end
+}
+
+overall_ab_resistance_sau <- function(df, path,path_par,org_res_dir_trends,...){
+
+  if (y==unique(data_yrs$yr)[1]){
+
+    hold_df_mrsa <- df %>%
+      filter(mo_organism==org_name& yr==y) %>%
+      filter(ab %in% mrsa_abs) %>%
+      group_by( mo_organism) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name='MRSA')
+
+
+    write.csv(hold_df_mrsa, file.path(org_res_dir_par,paste0(cntry,'_',org_name,'mrsa_overall_abs.csv')))
+
+    #other combos
+    hold_df_a <- df %>%
+      filter(mo_organism==org_name & yr==y) %>%
+      group_by( ab) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_name(ab))
+
+
+    write.csv(hold_df_a, file.path(org_res_dir_par,paste0(cntry,'_',org_name,'_overall_abs.csv')))
+
+    hold_df <- bind_rows(hold_df_a, hold_df_mrsa)
+
+    #plots
+    ggsave(file.path(org_res_dir_par,paste0(cntry,'_',org_name,'_overall_abs','.png')), overall_resistance_plot(hold_df), width=8, height=8, units="in", dpi=300)
+
+
+    #*****Analysis by period
+    #*yr
+
+
+    hold_df_mrsa <- df %>%
+      filter(mo_organism==org_name) %>%
+      filter(ab %in% mrsa_abs) %>%
+      group_by( mo_organism, yr) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name='MRSA')
+
+
+    write.csv(hold_df_mrsa, file.path(org_res_dir_trends,paste0('year_',cntry,'_',org_name,'mrsa_overall_abs.csv')))
+
+    #other combos
+    hold_df_a <- df %>%
+      filter(mo_organism==org_name) %>%
+      group_by( ab,yr) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_name(ab))
+
+
+    write.csv(hold_df_a, file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_abs.csv')))
+
+    hold_df <- bind_rows(hold_df_a, hold_df_mrsa) %>%
+      mutate(n_lab=paste0('n=',n))
+
+    #plots
+    ggsave(file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_abs','.png')),
+           overall_resistance_plot_trends(hold_df), width=8, height=8, units="in", dpi=300)
+
+    #Quarters
+    hold_df_mrsa <- df %>%
+      filter(mo_organism==org_name) %>%
+      filter(ab %in% mrsa_abs) %>%
+      group_by( mo_organism, yr_quarter) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name='MRSA')
+
+    quarter_dir <- file.path(dirname(org_res_dir_trends),'Quarters')
+    if(!dir.exists(quarter_dir)){dir.create(quarter_dir, recursive = T)}
+
+    write.csv(hold_df_mrsa, file.path(quarter_dir,paste0('year_',cntry,'_',org_name,'mrsa_overall_abs.csv')))
+
+    #other combos
+    hold_df_a <- df %>%
+      filter(mo_organism==org_name) %>%
+      group_by( ab,yr_quarter) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_name(ab))
+
+
+    write.csv(hold_df_a, file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs.csv')))
+
+    hold_df <- bind_rows(hold_df_a, hold_df_mrsa)%>%
+      mutate(n_lab=paste0('n=',n))
+
+    #plots
+    ggsave(file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs','.png')),
+           overall_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
+    #trend end
+  }else{NULL
+  }
+}
+
+#pathogen groups
+indiv_ab_resistance_genus <- function(df,path,path_par,org_res_dir_trends_par, org_res_dir_trends, ...){
+  hold_df <- df %>%
+    mutate(mo_organism=genus ) %>%
+    filter(ab %in% sel_abs) %>%
+    filter(mo_organism==org_name & yr==y) %>%
+    group_by(mo_organism, get(par_var_name), ab) %>%
+    summarise(n=n(),
+              r=sum(R),
+              total_R = r/n  ) %>%
+    mutate(ab_name=ab_name(ab),
+           var_name=`get(par_var_name)`)
+
+  write.csv(hold_df, file.path(org_res_dir_par,paste0(cntry,'_',org_name,'_',par,'.csv')))
+
+  if (y==unique(data_yrs$yr)[1]){
     #plots
     ##preseving the empty cols for plotting equal bars
     hold_df <-  hold_df %>% filter(n>29) %>%
@@ -548,14 +548,14 @@ indiv_ab_resistance_genus <- function(df,path,path_par, ...){
 
     ggsave(file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs','.png')),
            indiv_ab_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
-    }else{NULL
-      }
+  }else{NULL
+  }
 
-   # trend end
-     }
+  # trend end
+}
 
 
-overall_ab_resistance_genus <- function(df,path,path_par, ...){
+overall_ab_resistance_genus <- function(df,path,path_par, org_res_dir_trends,...){
 
   if (y==unique(data_yrs$yr)[1]){
 
@@ -571,54 +571,54 @@ overall_ab_resistance_genus <- function(df,path,path_par, ...){
 
     write.csv(hold_df, file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_abs.csv')))
 
-  #plots
-  ggsave(file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_abs','.png')),overall_resistance_plot(hold_df), width=8, height=8, units="in", dpi=300)
+    #plots
+    ggsave(file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_abs','.png')),overall_resistance_plot(hold_df), width=8, height=8, units="in", dpi=300)
 
-  #********Analysis by period
-  #*Yr
-  #*
+    #********Analysis by period
+    #*Yr
+    #*
 
-  hold_df <- df %>%
-    mutate(mo_organism=genus) %>%
-    filter(mo_organism==org_name) %>%
-    filter(ab %in% sel_abs) %>%
-    group_by( ab, yr) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_name(ab),
-           n_lab=paste0('n=',n))
+    hold_df <- df %>%
+      mutate(mo_organism=genus) %>%
+      filter(mo_organism==org_name) %>%
+      filter(ab %in% sel_abs) %>%
+      group_by( ab, yr) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_name(ab),
+             n_lab=paste0('n=',n))
 
-  write.csv(hold_df, file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_abs.csv')))
+    write.csv(hold_df, file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_abs.csv')))
 
-  #plots
-  ggsave(file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_abs','.png')),overall_resistance_plot_trends(hold_df),
-         width=8, height=8, units="in", dpi=300)
+    #plots
+    ggsave(file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_abs','.png')),overall_resistance_plot_trends(hold_df),
+           width=8, height=8, units="in", dpi=300)
 
-  #Quarters
-  hold_df <- df %>%
-    mutate(mo_organism=genus) %>%
-    filter(mo_organism==org_name) %>%
-    filter(ab %in% sel_abs) %>%
-    group_by( ab, yr_quarter) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_name(ab),
-           n_lab=paste0('n=',n))
+    #Quarters
+    hold_df <- df %>%
+      mutate(mo_organism=genus) %>%
+      filter(mo_organism==org_name) %>%
+      filter(ab %in% sel_abs) %>%
+      group_by( ab, yr_quarter) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_name(ab),
+             n_lab=paste0('n=',n))
 
-  quarter_dir <- file.path(dirname(org_res_dir_trends),'Quarters')
-  if(!dir.exists(quarter_dir)){dir.create(quarter_dir, recursive = T)}
+    quarter_dir <- file.path(dirname(org_res_dir_trends),'Quarters')
+    if(!dir.exists(quarter_dir)){dir.create(quarter_dir, recursive = T)}
 
-  write.csv(hold_df, file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs.csv')))
+    write.csv(hold_df, file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs.csv')))
 
-  #plots
-  ggsave(file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs','.png')),overall_resistance_plot_trends_quarter(hold_df),
-         width=8, height=8, units="in", dpi=300)
+    #plots
+    ggsave(file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_abs','.png')),overall_resistance_plot_trends_quarter(hold_df),
+           width=8, height=8, units="in", dpi=300)
   }else{NULL
-    }
-
   }
+
+}
 
 
 
@@ -628,9 +628,9 @@ overall_ab_resistance_genus <- function(df,path,path_par, ...){
 
 
 #Individual pathogens
-antibiotic_classes_res_indiv <- function(df,path,path_par,...) {
+antibiotic_classes_res_indiv <- function(df,path,path_par,org_res_dir_trends_par, org_res_dir_trends,...) {
 
- # abx_classes <- unique(ab_group(abs_ref)) #returns the antibiotic classes
+  # abx_classes <- unique(ab_group(abs_ref)) #returns the antibiotic classes
 
   hold_df <- df %>% #filter(ab_class %in% abx_classes) %>%  #turning this off for now
     filter(mo_organism==org_name & yr==y) %>%
@@ -657,130 +657,130 @@ antibiotic_classes_res_indiv <- function(df,path,path_par,...) {
 
 
   if (y==unique(data_yrs$yr)[1]){
-  #calculating overall resistance
-  hold_df <- df %>%
-    filter(mo_organism==org_name & yr==y) %>%
-    #filter(ab_class %in% abx_classes) %>%
-    arrange(desc(R)) %>%
-    distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
-    group_by(mo_organism, ab_class) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_class)
+    #calculating overall resistance
+    hold_df <- df %>%
+      filter(mo_organism==org_name & yr==y) %>%
+      #filter(ab_class %in% abx_classes) %>%
+      arrange(desc(R)) %>%
+      distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
+      group_by(mo_organism, ab_class) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_class)
 
-  write.csv(hold_df, file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_ab_classes.csv')))
+    write.csv(hold_df, file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_ab_classes.csv')))
 
-  #plot
-  ggsave(file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_ab_classes','.png')), overall_resistance_plot(hold_df), width=8, height=8, units="in", dpi=300)
-
-
-  #***Analysis by periods
-
-  hold_df <- df %>%
-    filter(mo_organism==org_name) %>%
-    arrange(desc(R)) %>%
-    distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
-    group_by(mo_organism, get(par_var_name), ab_class, yr) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_class,
-           var_name=`get(par_var_name)`)
-
-  write.csv(hold_df, file.path(org_res_dir_trends_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.csv')))
-
-  #plot
-  ##preseving the empty cols for plotting equal bars
-  hold_df <-  hold_df %>% filter(n>29) %>%
-    filter(!is.na(var_name)) %>%
-    ungroup() %>%
-    complete(ab_name, var_name, fill = list(total_R = 0))%>%
-    mutate(.is_missing = total_R == 0,   # flagging the ghosts
-           n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
-
-  ggsave(file.path(org_res_dir_trends_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.png')), indiv_ab_resistance_plot_trends(hold_df), width=8, height=8, units="in", dpi=300)
+    #plot
+    ggsave(file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_ab_classes','.png')), overall_resistance_plot(hold_df), width=8, height=8, units="in", dpi=300)
 
 
-  #calculating overall resistance
-  hold_df <- df %>%
-    filter(mo_organism==org_name) %>%
-    #filter(ab_class %in% abx_classes) %>%
-    arrange(desc(R)) %>%
-    distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
-    group_by(mo_organism, ab_class, yr) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_class,
-           n_lab=paste0('n=',n))
+    #***Analysis by periods
 
-  write.csv(hold_df, file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_ab_classes.csv')))
+    hold_df <- df %>%
+      filter(mo_organism==org_name) %>%
+      arrange(desc(R)) %>%
+      distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
+      group_by(mo_organism, get(par_var_name), ab_class, yr) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_class,
+             var_name=`get(par_var_name)`)
 
-  #plot
-  ggsave(file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_ab_classes','.png')),
-         overall_resistance_plot_trends(hold_df), width=8, height=8, units="in", dpi=300)
+    write.csv(hold_df, file.path(org_res_dir_trends_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.csv')))
 
-  ##bY qUARTERS
-  hold_df <- df %>%
-    filter(mo_organism==org_name) %>%
-    arrange(desc(R)) %>%
-    distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
-    group_by(mo_organism, get(par_var_name), ab_class, yr_quarter) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_class,
-           var_name=`get(par_var_name)`)
+    #plot
+    ##preseving the empty cols for plotting equal bars
+    hold_df <-  hold_df %>% filter(n>29) %>%
+      filter(!is.na(var_name)) %>%
+      ungroup() %>%
+      complete(ab_name, var_name, fill = list(total_R = 0))%>%
+      mutate(.is_missing = total_R == 0,   # flagging the ghosts
+             n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
 
-  quarter_dir_par <- file.path(dirname(org_res_dir_trends_par),'Quarters')
-  if(!dir.exists(quarter_dir_par)){dir.create(quarter_dir_par, recursive = T)}
-
-  write.csv(hold_df, file.path(quarter_dir_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.csv')))
-
-  #plot
-  ##preseving the empty cols for plotting equal bars
-  hold_df <-  hold_df %>% filter(n>29) %>%
-    filter(!is.na(var_name)) %>%
-    ungroup() %>%
-    complete(ab_name, var_name, fill = list(total_R = 0))%>%
-    mutate(.is_missing = total_R == 0,   # flagging the ghosts
-           n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
-
-  ggsave(file.path(quarter_dir_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.png')), indiv_ab_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
+    ggsave(file.path(org_res_dir_trends_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.png')), indiv_ab_resistance_plot_trends(hold_df), width=8, height=8, units="in", dpi=300)
 
 
-  #calculating overall resistance
-  hold_df <- df %>%
-    filter(mo_organism==org_name) %>%
-    #filter(ab_class %in% abx_classes) %>%
-    arrange(desc(R)) %>%
-    distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
-    group_by(mo_organism, ab_class, yr_quarter) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_class,
-           n_lab=paste0('n=',n))
+    #calculating overall resistance
+    hold_df <- df %>%
+      filter(mo_organism==org_name) %>%
+      #filter(ab_class %in% abx_classes) %>%
+      arrange(desc(R)) %>%
+      distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
+      group_by(mo_organism, ab_class, yr) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_class,
+             n_lab=paste0('n=',n))
 
-  quarter_dir <- file.path(dirname(org_res_dir_trends),'Quarters')
-  if(!dir.exists(quarter_dir)){dir.create(quarter_dir, recursive = T)}
+    write.csv(hold_df, file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_ab_classes.csv')))
 
-  write.csv(hold_df, file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_ab_classes.csv')))
+    #plot
+    ggsave(file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_ab_classes','.png')),
+           overall_resistance_plot_trends(hold_df), width=8, height=8, units="in", dpi=300)
 
-  #plot
-  ggsave(file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_ab_classes','.png')),
-         overall_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
+    ##bY qUARTERS
+    hold_df <- df %>%
+      filter(mo_organism==org_name) %>%
+      arrange(desc(R)) %>%
+      distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
+      group_by(mo_organism, get(par_var_name), ab_class, yr_quarter) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_class,
+             var_name=`get(par_var_name)`)
+
+    quarter_dir_par <- file.path(dirname(org_res_dir_trends_par),'Quarters')
+    if(!dir.exists(quarter_dir_par)){dir.create(quarter_dir_par, recursive = T)}
+
+    write.csv(hold_df, file.path(quarter_dir_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.csv')))
+
+    #plot
+    ##preseving the empty cols for plotting equal bars
+    hold_df <-  hold_df %>% filter(n>29) %>%
+      filter(!is.na(var_name)) %>%
+      ungroup() %>%
+      complete(ab_name, var_name, fill = list(total_R = 0))%>%
+      mutate(.is_missing = total_R == 0,   # flagging the ghosts
+             n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
+
+    ggsave(file.path(quarter_dir_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.png')), indiv_ab_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
+
+
+    #calculating overall resistance
+    hold_df <- df %>%
+      filter(mo_organism==org_name) %>%
+      #filter(ab_class %in% abx_classes) %>%
+      arrange(desc(R)) %>%
+      distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
+      group_by(mo_organism, ab_class, yr_quarter) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_class,
+             n_lab=paste0('n=',n))
+
+    quarter_dir <- file.path(dirname(org_res_dir_trends),'Quarters')
+    if(!dir.exists(quarter_dir)){dir.create(quarter_dir, recursive = T)}
+
+    write.csv(hold_df, file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_ab_classes.csv')))
+
+    #plot
+    ggsave(file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_ab_classes','.png')),
+           overall_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
   }else{NULL
-    }
+  }
 
   #trend end
 
-  }
+}
 
 
 #Grouped pathogens
-antibiotic_classes_res_grp <- function(df,path,path_par, ...) {
+antibiotic_classes_res_grp <- function(df,path,path_par, org_res_dir_trends_par, org_res_dir_trends,...) {
 
   abx_classes <- unique(ab_group(abs_ref)) #returns the antibiotic classes
 
@@ -812,186 +812,186 @@ antibiotic_classes_res_grp <- function(df,path,path_par, ...) {
 
   if (y==unique(data_yrs$yr)[1]){
 
-  #calculating overall resistance
-  hold_df <- df %>%
-    mutate(mo_organism=genus) %>%
-    filter(mo_organism==org_name & yr==y) %>%
-    #filter(ab_class %in% abx_classes) %>%
-    arrange(desc(R)) %>%
-    distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
-    group_by(mo_organism, ab_class) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_class,
-           n_lab=paste0('n=',n))
+    #calculating overall resistance
+    hold_df <- df %>%
+      mutate(mo_organism=genus) %>%
+      filter(mo_organism==org_name & yr==y) %>%
+      #filter(ab_class %in% abx_classes) %>%
+      arrange(desc(R)) %>%
+      distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
+      group_by(mo_organism, ab_class) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_class,
+             n_lab=paste0('n=',n))
 
-  write.csv(hold_df, file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_ab_classes.csv')))
+    write.csv(hold_df, file.path(org_res_dir,paste0(cntry,'_',org_name,'_overall_ab_classes.csv')))
 
-  #plot
-  ggsave(file.path(org_res_dir,paste0(cntry,'_',org_name,cntry,'_overall_ab_classes','.png')), overall_resistance_plot(hold_df), width=8, height=8, units="in", dpi=300)
+    #plot
+    ggsave(file.path(org_res_dir,paste0(cntry,'_',org_name,cntry,'_overall_ab_classes','.png')), overall_resistance_plot(hold_df), width=8, height=8, units="in", dpi=300)
 
-#analysis by preriod
-  #YR
-
-
-
-  abx_classes <- unique(ab_group(abs_ref)) #returns the antibiotic classes
-
-  hold_df <- df %>% #filter(ab_class %in% abx_classes) %>%
-    mutate(mo_organism=genus) %>%
-    filter(mo_organism==org_name) %>%
-    arrange(desc(R)) %>%
-    distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
-    group_by(mo_organism, get(par_var_name), ab_class,yr) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_class,
-           var_name=`get(par_var_name)`)
-
-  write.csv(hold_df, file.path(org_res_dir_trends_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.csv')))
-
-  #plot
-  ##preserving the empty cols for plotting equal bars
-  hold_df <-  hold_df %>% filter(n>29) %>%
-    filter(!is.na(var_name)) %>%
-    ungroup() %>%
-    complete(ab_name, var_name, fill = list(total_R = 0))%>%
-    mutate(.is_missing = total_R == 0,   # flagging the ghosts
-           n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
+    #analysis by preriod
+    #YR
 
 
-  ggsave(file.path(org_res_dir_trends_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.png')), indiv_ab_resistance_plot_trends(hold_df),
-         width=8, height=8, units="in", dpi=300)
+
+    abx_classes <- unique(ab_group(abs_ref)) #returns the antibiotic classes
+
+    hold_df <- df %>% #filter(ab_class %in% abx_classes) %>%
+      mutate(mo_organism=genus) %>%
+      filter(mo_organism==org_name) %>%
+      arrange(desc(R)) %>%
+      distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
+      group_by(mo_organism, get(par_var_name), ab_class,yr) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_class,
+             var_name=`get(par_var_name)`)
+
+    write.csv(hold_df, file.path(org_res_dir_trends_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.csv')))
+
+    #plot
+    ##preserving the empty cols for plotting equal bars
+    hold_df <-  hold_df %>% filter(n>29) %>%
+      filter(!is.na(var_name)) %>%
+      ungroup() %>%
+      complete(ab_name, var_name, fill = list(total_R = 0))%>%
+      mutate(.is_missing = total_R == 0,   # flagging the ghosts
+             n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
 
 
-  #calculating overall resistance
-  hold_df <- df %>%
-    mutate(mo_organism=genus) %>%
-    filter(mo_organism==org_name) %>%
-    #filter(ab_class %in% abx_classes) %>%
-    arrange(desc(R)) %>%
-    distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
-    group_by(mo_organism, ab_class, yr) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_class,
-           n_lab=paste0('n=',n))
-
-  write.csv(hold_df, file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_ab_classes.csv')))
-
-  #plot
-  ggsave(file.path(org_res_dir_trends,paste0(cntry,'_',org_name,cntry,'_overall_ab_classes','.png')), overall_resistance_plot_trends(hold_df), width=8, height=8, units="in", dpi=300)
-
-  #Quarters
-  abx_classes <- unique(ab_group(abs_ref)) #returns the antibiotic classes
-
-  hold_df <- df %>% #filter(ab_class %in% abx_classes) %>%
-    mutate(mo_organism=genus) %>%
-    filter(mo_organism==org_name) %>%
-    arrange(desc(R)) %>%
-    distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
-    group_by(mo_organism, get(par_var_name), ab_class,yr_quarter) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_class,
-           var_name=`get(par_var_name)`)
-
-  quarter_dir_par <- file.path(dirname(org_res_dir_trends_par),'Quarters')
-  if(!dir.exists(quarter_dir_par)){dir.create(quarter_dir_par, recursive = T)}
-
-  write.csv(hold_df, file.path(quarter_dir_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.csv')))
-
-  #plot
-  ##preserving the empty cols for plotting equal bars
-  hold_df <-  hold_df %>% filter(n>29) %>%
-    filter(!is.na(var_name)) %>%
-    ungroup() %>%
-    complete(ab_name, var_name, fill = list(total_R = 0))%>%
-    mutate(.is_missing = total_R == 0,   # flagging the ghosts
-           n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
+    ggsave(file.path(org_res_dir_trends_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.png')), indiv_ab_resistance_plot_trends(hold_df),
+           width=8, height=8, units="in", dpi=300)
 
 
-  ggsave(file.path(quarter_dir_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.png')), indiv_ab_resistance_plot_trends_quarter(hold_df),
-         width=8, height=8, units="in", dpi=300)
+    #calculating overall resistance
+    hold_df <- df %>%
+      mutate(mo_organism=genus) %>%
+      filter(mo_organism==org_name) %>%
+      #filter(ab_class %in% abx_classes) %>%
+      arrange(desc(R)) %>%
+      distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
+      group_by(mo_organism, ab_class, yr) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_class,
+             n_lab=paste0('n=',n))
+
+    write.csv(hold_df, file.path(org_res_dir_trends,paste0(cntry,'_',org_name,'_overall_ab_classes.csv')))
+
+    #plot
+    ggsave(file.path(org_res_dir_trends,paste0(cntry,'_',org_name,cntry,'_overall_ab_classes','.png')), overall_resistance_plot_trends(hold_df), width=8, height=8, units="in", dpi=300)
+
+    #Quarters
+    abx_classes <- unique(ab_group(abs_ref)) #returns the antibiotic classes
+
+    hold_df <- df %>% #filter(ab_class %in% abx_classes) %>%
+      mutate(mo_organism=genus) %>%
+      filter(mo_organism==org_name) %>%
+      arrange(desc(R)) %>%
+      distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
+      group_by(mo_organism, get(par_var_name), ab_class,yr_quarter) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_class,
+             var_name=`get(par_var_name)`)
+
+    quarter_dir_par <- file.path(dirname(org_res_dir_trends_par),'Quarters')
+    if(!dir.exists(quarter_dir_par)){dir.create(quarter_dir_par, recursive = T)}
+
+    write.csv(hold_df, file.path(quarter_dir_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.csv')))
+
+    #plot
+    ##preserving the empty cols for plotting equal bars
+    hold_df <-  hold_df %>% filter(n>29) %>%
+      filter(!is.na(var_name)) %>%
+      ungroup() %>%
+      complete(ab_name, var_name, fill = list(total_R = 0))%>%
+      mutate(.is_missing = total_R == 0,   # flagging the ghosts
+             n_lab=ifelse(is.na(n), '', paste0('n=',n)))   #indicating the n
 
 
-  #calculating overall resistance
-  hold_df <- df %>%
-    mutate(mo_organism=genus) %>%
-    filter(mo_organism==org_name) %>%
-    #filter(ab_class %in% abx_classes) %>%
-    arrange(desc(R)) %>%
-    distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
-    group_by(mo_organism, ab_class, yr_quarter) %>%
-    summarise(n=n(),
-              r=sum(R),
-              total_R = r/n  ) %>%
-    mutate(ab_name=ab_class,
-           n_lab=paste0('n=',n))
-
-  quarter_dir <- file.path(dirname(org_res_dir_trends),'Quarters')
-  if(!dir.exists(quarter_dir)){dir.create(quarter_dir, recursive = T)}
+    ggsave(file.path(quarter_dir_par,paste0(cntry,'_',org_name,'_',par,'ab_classes.png')), indiv_ab_resistance_plot_trends_quarter(hold_df),
+           width=8, height=8, units="in", dpi=300)
 
 
-  write.csv(hold_df, file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_ab_classes.csv')))
+    #calculating overall resistance
+    hold_df <- df %>%
+      mutate(mo_organism=genus) %>%
+      filter(mo_organism==org_name) %>%
+      #filter(ab_class %in% abx_classes) %>%
+      arrange(desc(R)) %>%
+      distinct(uid,mo_organism,ab_class, .keep_all = TRUE) %>% #remove duplicates for the Ab classes, depending on how vast the dataset is, could be updated to country, lab, etc
+      group_by(mo_organism, ab_class, yr_quarter) %>%
+      summarise(n=n(),
+                r=sum(R),
+                total_R = r/n  ) %>%
+      mutate(ab_name=ab_class,
+             n_lab=paste0('n=',n))
 
-  #plot
-  ggsave(file.path(quarter_dir,paste0(cntry,'_',org_name,cntry,'_overall_ab_classes','.png')), overall_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
+    quarter_dir <- file.path(dirname(org_res_dir_trends),'Quarters')
+    if(!dir.exists(quarter_dir)){dir.create(quarter_dir, recursive = T)}
+
+
+    write.csv(hold_df, file.path(quarter_dir,paste0(cntry,'_',org_name,'_overall_ab_classes.csv')))
+
+    #plot
+    ggsave(file.path(quarter_dir,paste0(cntry,'_',org_name,cntry,'_overall_ab_classes','.png')), overall_resistance_plot_trends_quarter(hold_df), width=8, height=8, units="in", dpi=300)
 
   }else{
     NULL
   }
 
-  }
+}
 
 
 # Plotting functions ------------------------------------------------------
 
 overall_resistance_plot <- function(df) {
   if(nrow(df[df$n>29,])>0){
-  plt_hold <- ggplot(df  %>% filter(n>29), aes(x=reorder(ab_name,total_R), y=total_R*100, group=ab_name))+
-    geom_col(position = 'dodge', fill='dodgerblue')+
-    labs(x='Antibiotic', y='Percent resistance')+
-    theme_bw()+
-    theme(axis.text.x = element_text(size=11,angle=90,hjust=1,vjust=0),axis.text.y = element_text(size=10),axis.title = element_text(size=12),
-          axis.title.x = element_text(size=11),
-          plot.title = element_text(hjust = 0.5, face='bold'),legend.key.size = unit(0.7, "cm"),legend.spacing.x = unit(0.5,"cm"),
-          strip.text = element_text(size=11),legend.text=element_text(size=8),legend.title = element_blank(),
-          panel.border = element_rect(colour = "black", fill=NA, size=0.5),legend.position='right')
- plt_hold
-}else{
-  ggplot(data.frame(x = c("a","b"), y = c(10, 20)), aes(x, y)) +
-    geom_point() +
-    labs(x = "", y = "") +
-    annotate("text",
-             x = "a", y = 15,
-             label = "Not enough data to generate this plot") +
-    theme_bw() +
-    theme(axis.text.x = element_blank(),
-          axis.text.y = element_blank())
-}
+    plt_hold <- ggplot(df  %>% filter(n>29), aes(x=reorder(ab_name,total_R), y=total_R*100, group=ab_name))+
+      geom_col(position = 'dodge', fill='dodgerblue')+
+      labs(x='Antibiotic', y='Percent resistance')+
+      theme_bw()+
+      theme(axis.text.x = element_text(size=11,angle=90,hjust=1,vjust=0),axis.text.y = element_text(size=10),axis.title = element_text(size=12),
+            axis.title.x = element_text(size=11),
+            plot.title = element_text(hjust = 0.5, face='bold'),legend.key.size = unit(0.7, "cm"),legend.spacing.x = unit(0.5,"cm"),
+            strip.text = element_text(size=11),legend.text=element_text(size=8),legend.title = element_blank(),
+            panel.border = element_rect(colour = "black", fill=NA, size=0.5),legend.position='right')
+    plt_hold
+  }else{
+    ggplot(data.frame(x = c("a","b"), y = c(10, 20)), aes(x, y)) +
+      geom_point() +
+      labs(x = "", y = "") +
+      annotate("text",
+               x = "a", y = 15,
+               label = "Not enough data to generate this plot") +
+      theme_bw() +
+      theme(axis.text.x = element_blank(),
+            axis.text.y = element_blank())
+  }
 }
 
 
 indiv_ab_resistance_plot <- function(df) {
   if(nrow(df[df$n>29,])>0){
-  plt_hold <- ggplot(df, aes(x=ab_name, y=total_R*100, group=var_name, fill=var_name))+
-    geom_col( position = position_dodge(width = 0.9))+
-    #geom_text(aes( y=total_R*100,label=round(total_R*100,1)), position=position_dodge(width = 0.9), vjust=-.5)+
-    labs(x=par, y='Percent resistance')+
-    scale_fill_brewer(palette='Dark2',direction = -1)+
-    theme_bw()+
-    theme(axis.text.x = element_text(size=11,angle=90,hjust=1,vjust=0),axis.text.y = element_text(size=10),axis.title = element_text(size=12),
-          axis.title.x = element_text(size=11),
-          #panel.grid = element_blank(),
-          plot.title = element_text(hjust = 0.5, face='bold'),legend.key.size = unit(0.7, "cm"),legend.spacing.x = unit(0.5,"cm"),
-          strip.text = element_text(size=11),legend.text=element_text(size=8),legend.title = element_blank(),
-          panel.border = element_rect(colour = "black", fill=NA, size=0.5),legend.position='bottom')
-  plt_hold
+    plt_hold <- ggplot(df, aes(x=ab_name, y=total_R*100, group=var_name, fill=var_name))+
+      geom_col( position = position_dodge(width = 0.9))+
+      #geom_text(aes( y=total_R*100,label=round(total_R*100,1)), position=position_dodge(width = 0.9), vjust=-.5)+
+      labs(x=par, y='Percent resistance')+
+      scale_fill_brewer(palette='Dark2',direction = -1)+
+      theme_bw()+
+      theme(axis.text.x = element_text(size=11,angle=90,hjust=1,vjust=0),axis.text.y = element_text(size=10),axis.title = element_text(size=12),
+            axis.title.x = element_text(size=11),
+            #panel.grid = element_blank(),
+            plot.title = element_text(hjust = 0.5, face='bold'),legend.key.size = unit(0.7, "cm"),legend.spacing.x = unit(0.5,"cm"),
+            strip.text = element_text(size=11),legend.text=element_text(size=8),legend.title = element_blank(),
+            panel.border = element_rect(colour = "black", fill=NA, size=0.5),legend.position='bottom')
+    plt_hold
   }else{
     ggplot(data.frame(x = c("a","b"), y = c(10, 20)), aes(x, y)) +
       geom_point() +
@@ -1020,7 +1020,7 @@ indiv_ab_resistance_plot_trends = function(df) {
       scale_fill_manual(values = setNames(pal_strong, lvls), name = "Period") +
       labs(x='', y='Percent resistance')+
       ylim(0,100)+
-      geom_text(aes(label=n_lab, group = yr), position=pd, angle=90, hjust=-.05)+
+      #geom_text(aes(label=n_lab, group = yr), position=pd, angle=90, hjust=-.05)+
       theme_bw()+
       theme(axis.text.x = element_text(size=11,angle=90,hjust=1,vjust=0),axis.text.y = element_text(size=10),axis.title = element_text(size=12),
             axis.title.x = element_text(size=11),
@@ -1057,7 +1057,7 @@ overall_resistance_plot_trends <- function(df) {
       scale_fill_manual(values = setNames(pal_strong, lvls), name = "Period") +
       labs(x='', y='Percent resistance')+
       ylim(0,100)+
-      geom_text(aes(label=n_lab, group = yr), position=pd, angle=90, hjust=-.05)+
+      #geom_text(aes(label=n_lab, group = yr), position=pd, angle=90, hjust=-.05)+
       theme_bw()+
       theme(axis.text.x = element_text(size=11,angle=90,hjust=1,vjust=0),axis.text.y = element_text(size=10),axis.title = element_text(size=12),
             axis.title.x = element_text(size=11),
@@ -1162,20 +1162,20 @@ overall_resistance_plot_trends_quarter <- function(df) {
 # Analysis functions ------------------------------------------------------
 
 
-amr_individual_pathogens <-  function(xdf, org_res_dir,org_res_dir_par,org_name, abs_ref, cntry, par, par_var_name, ...){
+amr_individual_pathogens <-  function(xdf, org_res_dir,org_res_dir_par,org_name, abs_ref, cntry, par, par_var_name,org_res_dir_trends_par, org_res_dir_trends, ...){
   sel_abs <- subset(abs_ref,  abs_ref %in% xdf$ab)
 
   #subgroups
   environment(indiv_ab_resistance) <- environment()
-  indiv_ab_resistance(xdf,org_res_dir, org_res_dir_par,...)
+  indiv_ab_resistance(xdf,org_res_dir, org_res_dir_par, org_res_dir_trends_par, org_res_dir_trends,...)
 
   #calculating overall resistance
   environment(overall_ab_resistance) <- environment()
-  overall_ab_resistance(xdf,org_res_dir, org_res_dir_par,...)
+  overall_ab_resistance(xdf,org_res_dir, org_res_dir_par, org_res_dir_trends,...)
 
   #class resistance
   environment(antibiotic_classes_res_indiv) <- environment()
-  antibiotic_classes_res_indiv(xdf,org_res_dir, org_res_dir_par,...)
+  antibiotic_classes_res_indiv(xdf,org_res_dir, org_res_dir_par,org_res_dir_trends_par, org_res_dir_trends,...)
 
   if (exists("con") && inherits(con, "DBIConnection")) try(DBI::dbDisconnect(con), silent = TRUE)
   invisible(NULL)
@@ -1183,7 +1183,7 @@ amr_individual_pathogens <-  function(xdf, org_res_dir,org_res_dir_par,org_name,
 
 
 #MRSA
-mrsa_analysis <-  function(xdf,org_res_dir,org_res_dir_par,org_name, abs_ref, cntry, par, par_var_name, ...){
+mrsa_analysis <-  function(xdf,org_res_dir,org_res_dir_par,org_name, abs_ref, cntry, par, par_var_name, org_res_dir_trends_par, org_res_dir_trends,...){
   mrsa_abs <- c('FOX', 'MET', 'OXA')
   sel_abs_mrsa <- subset(mrsa_abs,  mrsa_abs %in% names(an_df))
   sel_abs <- subset(abs_ref,  abs_ref %in% names(an_df))
@@ -1191,33 +1191,41 @@ mrsa_analysis <-  function(xdf,org_res_dir,org_res_dir_par,org_name, abs_ref, cn
   #MRSA
   #subgroups
   environment(indiv_ab_resistance_sau) <- environment()
-  indiv_ab_resistance_sau(xdf,org_res_dir, org_res_dir_par, ...)
+  indiv_ab_resistance_sau(xdf,org_res_dir, org_res_dir_par, org_res_dir_trends_par, org_res_dir_trends,...)
 
   #calculating overall resistance
   #MRSA
   environment(overall_ab_resistance_sau) <- environment()
-  overall_ab_resistance_sau(xdf,org_res_dir, org_res_dir_par,...)
+  overall_ab_resistance_sau(xdf,org_res_dir, org_res_dir_par, org_res_dir_trends,...)
 
   #class resistance
   environment(antibiotic_classes_res_indiv) <- environment()
-  antibiotic_classes_res_indiv(xdf,...)
+
+  antibiotic_classes_res_indiv(
+    xdf,
+    org_res_dir,          # path
+    org_res_dir_par,      # path_par
+    org_res_dir_trends_par,
+    org_res_dir_trends,
+    ...
+  )
 }
 
 ##
-amr_pathogen_groups <-  function(xdf,org_res_dir,org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name, ...){
+amr_pathogen_groups <-  function(xdf,org_res_dir,org_res_dir_par, org_name, abs_ref, cntry, par, par_var_name, org_res_dir_trends_par, org_res_dir_trends,...){
   sel_abs <- subset(abs_ref,  abs_ref %in% xdf$ab)
 
   #subgroups
   environment(indiv_ab_resistance_genus) <- environment()
-  indiv_ab_resistance_genus(xdf,org_res_dir, org_res_dir_par, ...)
+  indiv_ab_resistance_genus(xdf,org_res_dir, org_res_dir_par, org_res_dir_trends_par, org_res_dir_trends,...)
 
   #calculating overall resistance
   environment(overall_ab_resistance_genus) <- environment()
-  overall_ab_resistance_genus(xdf,org_res_dir, org_res_dir_par, ...)
+  overall_ab_resistance_genus(xdf,org_res_dir, org_res_dir_par, org_res_dir_trends,...)
 
   #class resistance
   environment(antibiotic_classes_res_grp) <- environment()
-  antibiotic_classes_res_grp(xdf,org_res_dir, org_res_dir_par, ...)
+  antibiotic_classes_res_grp(xdf,org_res_dir, org_res_dir_par, org_res_dir_trends_par, org_res_dir_trends,...)
 
   if (exists("con") && inherits(con, "DBIConnection")) try(DBI::dbDisconnect(con), silent = TRUE)
   invisible(NULL)
