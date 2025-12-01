@@ -43,8 +43,16 @@ amr_res <- get_test_results(df=amr)
 famr_long <- pivot_abx_results(df=amr_res)
 
 # separate breakpoints and SIR interpretations
-famr_long_sir <- get_sir_interpr(df=famr_long)%>% filter(!is.na(ab_name(drug_code)))
-famr_long_con <- get_con_interp(df=famr_long)%>% filter(!is.na(ab_name(drug_code)))
+sir_intp <- get_sir_interpr(df=famr_long)
+con_intp <- get_con_interp(df=famr_long)
+
+if(nrow(sir_intp)>0){famr_long_sir <- sir_intp%>%
+  filter(!is.na(ab_name(drug_code)))}else{famr_long_sir =sir_intp[0, ]}
+
+if(nrow(con_intp)>0){famr_long_con <- con_intp%>%
+  filter(!is.na(ab_name(drug_code)))}else{famr_long_con =con_intp[0, ]}
+
+  #famr_long_con <- get_con_interp(df=famr_long)%>% filter(!is.na(ab_name(drug_code)))
 
 
 # Convert breakpoints to SIR ----------------------------------------------
@@ -114,8 +122,12 @@ amr_sir <- do.call('rbind', chunk_hold)
 
 
 # combine results
+tmp <- purrr::compact(list(amr_con, amr_sir)) |>
+  purrr::reduce(dplyr::bind_rows, .init = NULL)
 
-sir_outcomes_df <- dplyr::bind_rows(amr_con, amr_sir) %>%
+if (!is.null(tmp) && nrow(tmp) > 0) {
+
+sir_outcomes_df <- tmp %>%
 
   dplyr::filter(intrinsic_res_status=='FALSE') %>%   #drop the intrinsically resistant bug-drugs to not skew results
 
@@ -128,8 +140,9 @@ sir_outcomes_df <- dplyr::bind_rows(amr_con, amr_sir) %>%
 excluded_rec <- bind_rows(amr_con, amr_sir) %>%
 
   dplyr::filter(intrinsic_res_status=='TRUE'| interpreted_res=='NA')
-
-
+} else {
+  amc2 <- NULL
+}
 # get organism full names
 
 lkp_organisms <- AMR::microorganisms %>% dplyr::select(mo,fullname)  #puls the entire list

@@ -64,62 +64,56 @@ safe_as_posix <- function(x, ...) {
 
 
 #processing date columns
-date_col_processing_fun <- function(df,
-                                    date_col,
+##Dates
+safe_as_posix <- function(x, ...) {
+  tryCatch(as.POSIXct(x, ...), error = function(e) NA)
+}
+
+date_col_processing_vec <- function(x,
                                     excel_origin = as.Date("1899-12-30"),
                                     date_parse_vec = c("ymd", "mdy", "dmy")) {
+  # raw input
+  format_date_new <- x
 
-  df %>%
-    dplyr::mutate(
-      # raw input
-      format_date_new = date_col,
+  # numeric probe (for epochs + Excel serials)
+  num <- suppressWarnings(as.numeric(format_date_new))
 
-      # numeric probe (for epochs + Excel serials)
-      .num = suppressWarnings(as.numeric(format_date_new)),
+  # smart parsing to POSIXct
+  posix <- dplyr::case_when(
+    # already Date / POSIXt
+    inherits(format_date_new, "Date")   ~ safe_as_posix(format_date_new, tz = "UTC"),
+    inherits(format_date_new, "POSIXt") ~ safe_as_posix(format_date_new, tz = "UTC"),
 
-      # smart parsing to POSIXct
-      .posix = dplyr::case_when(
-        # already Date/POSIXt
-        inherits(format_date_new, "Date")   ~ safe_as_posix(format_date_new, tz = "UTC"),
-        inherits(format_date_new, "POSIXt") ~ safe_as_posix(format_date_new, tz = "UTC"),
+    # numeric epochs: ms since 1970
+    !is.na(num) & num > 1e12 ~ safe_as_posix(num / 1000,
+                                             origin = "1970-01-01",
+                                             tz = "UTC"),
+    # numeric epochs: seconds since 1970
+    !is.na(num) & num > 1e9  ~ safe_as_posix(num,
+                                             origin = "1970-01-01",
+                                             tz = "UTC"),
 
-        # numeric epochs: ms since 1970
-        !is.na(.num) & .num > 1e12 ~ safe_as_posix(.num / 1000,
-                                                   origin = "1970-01-01",
-                                                   tz = "UTC"),
-        # numeric epochs: seconds since 1970
-        !is.na(.num) & .num > 1e9  ~ safe_as_posix(.num,
-                                                   origin = "1970-01-01",
-                                                   tz = "UTC"),
+    # Excel serial days (anything numeric left over)
+    !is.na(num) ~ safe_as_posix(num * 86400,
+                                origin = excel_origin,
+                                tz = "UTC"),
 
-        # Excel serial days (anything numeric left over)
-        !is.na(.num) ~ safe_as_posix(.num * 86400,
-                                     origin = excel_origin,
-                                     tz = "UTC"),
-
-        # fallback: parse character dates in various formats
-        TRUE ~ tryCatch(
-          suppressWarnings(
-            parse_date_time(as.character(format_date_new),
-                            orders = date_parse_vec,
-                            tz = "UTC")
-          ),
-          error = function(e) as.POSIXct(NA)
-        )
+    # fallback: parse character dates in various formats
+    TRUE ~ tryCatch(
+      suppressWarnings(
+        parse_date_time(as.character(format_date_new),
+                        orders = date_parse_vec,
+                        tz = "UTC")
       ),
+      error = function(e) as.POSIXct(NA)
+    )
+  )
 
-      # final cleaned Date
-      f_date_cleaned = as.Date(.posix),
-
-      # flag failures
-      parse_failed       = is.na(.posix) & !is.na(format_date_new),
-      parse_failed_value = ifelse(parse_failed,
-                                  as.character(format_date_new),
-                                  NA_character_)
-    ) %>%
-    dplyr::rename(date_new = f_date_cleaned) %>%
-    dplyr::select(date_new)
+  # final cleaned Date
+  as.Date(posix)
 }
+
+
 
 
 #colors for plotting

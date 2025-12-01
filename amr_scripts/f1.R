@@ -110,3 +110,58 @@ if(!dir.exists(amr_updates_dir)){dir.create(amr_updates_dir, recursive = T)}
 
 #suppress summarize messages
 options(dplyr.summarise.inform = FALSE)
+
+#user added date
+user_added_date=''
+
+
+##Dates
+safe_as_posix <- function(x, ...) {
+  tryCatch(as.POSIXct(x, ...), error = function(e) NA)
+}
+
+date_col_processing_vec <- function(x,
+                                    excel_origin = as.Date("1899-12-30"),
+                                    date_parse_vec = c("ymd", "mdy", "dmy")) {
+  # raw input
+  format_date_new <- x
+
+  # numeric probe (for epochs + Excel serials)
+  num <- suppressWarnings(as.numeric(format_date_new))
+
+  # smart parsing to POSIXct
+  posix <- dplyr::case_when(
+    # already Date / POSIXt
+    inherits(format_date_new, "Date")   ~ safe_as_posix(format_date_new, tz = "UTC"),
+    inherits(format_date_new, "POSIXt") ~ safe_as_posix(format_date_new, tz = "UTC"),
+
+    # numeric epochs: ms since 1970
+    !is.na(num) & num > 1e12 ~ safe_as_posix(num / 1000,
+                                             origin = "1970-01-01",
+                                             tz = "UTC"),
+    # numeric epochs: seconds since 1970
+    !is.na(num) & num > 1e9  ~ safe_as_posix(num,
+                                             origin = "1970-01-01",
+                                             tz = "UTC"),
+
+    # Excel serial days (anything numeric left over)
+    !is.na(num) ~ safe_as_posix(num * 86400,
+                                origin = excel_origin,
+                                tz = "UTC"),
+
+    # fallback: parse character dates in various formats
+    TRUE ~ tryCatch(
+      suppressWarnings(
+        parse_date_time(as.character(format_date_new),
+                        orders = date_parse_vec,
+                        tz = "UTC")
+      ),
+      error = function(e) as.POSIXct(NA)
+    )
+  )
+
+  # final cleaned Date
+  as.Date(posix)
+}
+
+

@@ -33,6 +33,7 @@ pacman::p_load(
   zoo,
   shinythemes,
   rlang,
+  purrr,
   rhandsontable
 )
 

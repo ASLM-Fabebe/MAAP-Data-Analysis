@@ -43,9 +43,9 @@ ui <- fluidPage(
                  verbatimTextOutput("register_msg"),
                  br(),
 
-                 selectInput("os_type", "Select your Operating System:",
-                             choices = c("Windows", "Mac", "Linux", "Other")),
-                 br(),
+                 #selectInput("os_type", "Select your Operating System:",
+                #             choices = c("Windows", "Mac", "Linux", "Other")),
+                 #br(),
                  textOutput("os_msg"),
 
                  br(),
@@ -56,6 +56,23 @@ ui <- fluidPage(
                  helpText(paste0("Save in ", amr_updates_dir,"/")),
 
                  br(),
+
+                 ## NEW SECTION for "no date column"
+                 checkboxInput("no_date_col",
+                               "My dataset does not have a date column"),
+
+                 conditionalPanel(
+                   condition = "input.no_date_col == true",
+
+                   textInput("last_year_date",
+                             "Enter last date of data year (e.g., 2024-12-31)"),
+
+                   actionButton("reg_date", "Register Date"),
+                   br(),
+                   verbatimTextOutput("date_msg")
+                 ),
+
+                 br(),br(),
 
 
 
@@ -216,6 +233,19 @@ server <- function(input, output, session) {
   # Step logs
   step_logs <- lapply(1:8, function(i) reactiveVal(""))
 
+  # Auto-detect OS and preselect
+  session$onFlushed(function() {
+    sysname <- tryCatch(Sys.info()[["sysname"]], error = function(e) NULL)
+    detected_os <- switch(sysname,
+                          Windows = "Windows",
+                          Darwin = "Mac",
+                          Linux = "Linux",
+                          "Other")
+    updateSelectInput(session, "os_type", selected = detected_os)
+    assign("user_os", detected_os, envir = .GlobalEnv)
+    output$os_msg <- renderText({ paste0("✅ Operating System Selected: ", detected_os, " (auto-detected)") })
+  }, once = TRUE)
+
   # ---- Step 1 ----
   output$table_1 <- renderRHandsontable({
     df <- step1_data()
@@ -239,16 +269,34 @@ server <- function(input, output, session) {
   })
 
   #operating system for antibiograms
-  observeEvent(input$os_type, {
-    req(input$os_type)  # ensure user has selected something
+  # observeEvent(input$os_type, {
+  #   req(input$os_type)  # ensure user has selected something
+  #
+  #   # Save to global environment
+  #   assign("user_os", input$os_type, envir = .GlobalEnv)
+  #
+  #   # Feedback to user
+  #   output$os_msg <- renderText({
+  #     paste0("✅ Operating System Selected: ", input$os_type)
+  #   })
+  # })
 
-    # Save to global environment
-    assign("user_os", input$os_type, envir = .GlobalEnv)
+  #date columns
+  observeEvent(input$reg_date, {
+    req(input$last_year_date)
 
-    # Feedback to user
-    output$os_msg <- renderText({
-      paste0("✅ Operating System Selected: ", input$os_type)
-    })
+    assign("user_added_date", input$last_year_date, envir = .GlobalEnv)
+
+    # Validate the date
+    date_val <- try(as.Date(input$last_year_date), silent = TRUE)
+
+    if (inherits(date_val, "try-error") || is.na(date_val)) {
+      output$date_msg <- renderText("❌ Invalid date format. Use YYYY-MM-DD.")
+    } else {
+      output$date_msg <- renderText(
+        paste("✔️ Last date registered:", date_val)
+      )
+    }
   })
 
   observe({ req(input$table_1); step1_data(hot_to_r(input$table_1)) })

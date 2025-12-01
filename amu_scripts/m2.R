@@ -28,7 +28,7 @@ amu_raw_meta <- amu_raw %>% dplyr::select(names(amu_raw)[!str_detect(names(amu_r
                     ifelse(!is.na(age_months), as.numeric(age_months)/12,
                            ifelse(!is.na(age_days), as.numeric(age_days)/365,
                                   NA))),
-  date_of_data_collection=date_col_processing_fun(amu_raw, amu_raw$date_of_data_collection)$date_new)%>%
+  date_of_data_collection=date_col_processing_vec(date_of_data_collection))%>%
     distinct()
 
 ab_mix_hold <- list()
@@ -63,8 +63,8 @@ amu_r1 <- do.call('rbind', ab_mix_hold) %>%
   mutate(antibiotic_unit_dose_frequency= as.numeric(antibiotic_unit_dose_frequency),
          antibiotic_unit_dose_frequency= ifelse(antibiotic_unit_dose_frequency>6&antibiotic_unit_dose_frequency<30,
                                                 24/antibiotic_unit_dose_frequency, antibiotic_unit_dose_frequency),#handling the 24h/half days entries
-         antibiotic_therapy_start_date=date_col_processing_fun(., .$antibiotic_therapy_start_date)$date_new,
-         antibiotic_therapy_end_date=date_col_processing_fun(., .$antibiotic_therapy_end_date)$date_new,
+         antibiotic_therapy_start_date=date_col_processing_vec(antibiotic_therapy_start_date),
+         antibiotic_therapy_end_date=date_col_processing_vec(antibiotic_therapy_end_date),
          #if end date therapy is missing, assume it is still active
          #antibiotic_therapy_end_date=ifelse(is.na(antibiotic_therapy_end_date), as.Date(date_of_data_collection), antibiotic_therapy_end_date),
          #if dose frequency is missing, assume it was administered once

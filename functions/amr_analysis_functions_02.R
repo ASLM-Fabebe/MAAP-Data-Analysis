@@ -26,26 +26,8 @@ if (file.exists(file_path)) {
 
 ###call and rename stuff
 
-cols_to_update <- read_excel(paste0(amr_updates_dir,"/select_amr_variables.xlsx"))
-
-#move columns to beginning
-# # Move given columns to the end of a data frame
-# move_cols_to_beginning <- function(df, cols) {
-#   all_cols <- names(df)
-#   cols <- intersect(cols, all_cols)  # keep only valid ones
-#   other_cols <- setdiff(all_cols, cols)
-#   df <- df[, c(cols, other_cols), drop = FALSE]
-#   return(df)
-# }
-#
-# ##deduplicate names keep last
-# dedup_cols_keep_last <- function(df) {
-#   dupes <- duplicated(names(df), fromLast = TRUE)
-#   df <- df[, !dupes, drop = FALSE]
-#   return(df)
-# }
-#
-# amr <- move_cols_to_beginning(amr, cols_to_update$man_vars)
+cols_to_update <- read_excel(paste0(amr_updates_dir,"/select_amr_variables.xlsx")) %>%
+  mutate(my_dataset=ifelse(is.na(my_dataset), 'not available', my_dataset))  #user canjust leave unavailable columns blank
 
 
 # Perform renaming
@@ -60,57 +42,19 @@ unavailable_cols=cols_to_update$man_vars[cols_to_update$my_dataset=='not availab
 
 amr[unavailable_cols]=NA
 
+if('Specimen date' %in% unavailable_cols){amr$`Specimen date`=user_added_date }else{amr$`Specimen date`=amr$`Specimen date`}
+
+##user_dates
+#amr <- amr %>% mutate(`Specimen date`=ifelse(all(is.na(`Specimen date`)),user_added_date, `Specimen date`))
+
 
 get_inputs_and_prelim_cleanup <- function(){
 
   # Load AMR data sources ---------------------------------------------------
 
-    safe_as_posix <- function(x, ...) {
-     out <- tryCatch(as.POSIXct(x, ...), error = function(e) NA)
-     out
-   }
-
     amr <- amr %>%
-     mutate(
-       # pick source
-       Specimen_date_new = if ("Date" %in% class(`Date of data entry`)) {
-         coalesce(`Specimen date`, `Date of data entry`)
-       } else {
-         `Specimen date`
-       },
-
-       # numeric probe
-       .num = suppressWarnings(as.numeric(Specimen_date_new)),
-
-       # smart parsing
-       .posix = dplyr::case_when(
-         inherits(Specimen_date_new, "Date")    ~ safe_as_posix(Specimen_date_new, tz = "UTC"),
-         inherits(Specimen_date_new, "POSIXt")  ~ safe_as_posix(Specimen_date_new, tz = "UTC"),
-
-         # numeric epochs
-         !is.na(.num) & .num > 1e12 ~ safe_as_posix(.num/1000, origin = "1970-01-01", tz = "UTC"), # ms
-         !is.na(.num) & .num > 1e9  ~ safe_as_posix(.num,      origin = "1970-01-01", tz = "UTC"), # sec
-
-         # Excel serial days
-         !is.na(.num) ~ safe_as_posix(.num * 86400, origin = excel_origin, tz = "UTC"),
-
-         # fallback to parsing strings
-         TRUE ~ tryCatch(
-           suppressWarnings(parse_date_time(as.character(Specimen_date_new),
-                                            orders = date_parse_vec, tz = "UTC")),
-           error = function(e) NA
-         )
-       ),
-
-       specimen_date_cleaned = as.Date(.posix),
-
-       # flag failures
-       parse_failed = is.na(.posix) & !is.na(Specimen_date_new),
-       parse_failed_value = ifelse(parse_failed, as.character(Specimen_date_new), NA_character_),
-
-       r_id = row_number()
-     ) %>%
-     dplyr::select(-.num, -.posix)
+     mutate(specimen_date_cleaned=date_col_processing_vec(`Specimen date`),
+            r_id = row_number())
 
 
 
