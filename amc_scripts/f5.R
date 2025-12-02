@@ -703,7 +703,7 @@ amc_dir_class <- file.path(cntry,"Results_AMC",'class')
 
 if(!dir.exists(amc_dir_class)){dir.create(amc_dir_class, recursive = T)}
 
-class_names <- read_excel('amc_resources/ab_class_updated_b.xlsx') %>%
+class_names <- readxl::read_excel('amc_resources/ab_class_updated_b.xlsx') %>%
   dplyr::select(antibiotic_names, Class, Category) %>% distinct(antibiotic_names, .keep_all = T)
 
 rearrange_words <- function(x, sep = ",") {

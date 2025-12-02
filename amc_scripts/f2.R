@@ -11,7 +11,7 @@ amc_dir <- file.path(cntry, "Results_AMC")
 if(!dir.exists(amc_dir)){dir.create(amc_dir, recursive = T)}
 
 
-cols_to_update <- read_excel(paste0(amc_updates_dir,"/select_amc_variables.xlsx")) %>%
+cols_to_update <- readxl::read_excel(paste0(amc_updates_dir,"/select_amc_variables.xlsx")) %>%
   mutate(Corresponding_variables=ifelse(is.na(Corresponding_variables), 'not available', Corresponding_variables))  #user canjust leave unavailable columns blank
 
 
@@ -102,12 +102,12 @@ other_non_antibiotics <- c(
 exclude_extra <- tolower(c(inhibitors, other_non_antibiotics))
 
 #who ref
-ddd_ref <- read_excel('amc_resources/ab_molecules_amc.xlsx') %>%
+ddd_ref <- readxl::read_excel('amc_resources/ab_molecules_amc.xlsx') %>%
   mutate(name_route=tolower(name_route)) %>%
   distinct(name_route, .keep_all = T)
 
 #atc molecules
-atcs_cleaned <- read_excel('amc_resources/ab_molecules.xlsx') %>%
+atcs_cleaned <- readxl::read_excel('amc_resources/ab_molecules.xlsx') %>%
   mutate(original_entry=tolower(trimws(original_entry))) %>%
   distinct(original_entry, .keep_all = T)
 
@@ -115,7 +115,7 @@ atcs_cleaned <- read_excel('amc_resources/ab_molecules.xlsx') %>%
 antibiotics_mol_dict <- trimws(tolower(atcs_cleaned$original_entry))
 
 #strength units reference
-units_ref <- read_excel('amc_resources/strength_units_updates_b.xlsx')
+units_ref <- readxl::read_excel('amc_resources/strength_units_updates_b.xlsx')
 
 
 #load the dataset

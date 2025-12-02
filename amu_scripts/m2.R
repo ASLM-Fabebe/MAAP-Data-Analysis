@@ -1,6 +1,6 @@
 
 #updating the column names
-cols_to_update <- read_excel(paste0(amu_updates_dir,"/select_amu_variables.xlsx")) %>%
+cols_to_update <- readxl::read_excel(paste0(amu_updates_dir,"/select_amu_variables.xlsx")) %>%
   mutate(corresponding_variables=ifelse(is.na(corresponding_variables), 'not available', corresponding_variables))  #user canjust leave unavailable columns blank
 
 #duplicated names - check if the user has provided duplicated names
