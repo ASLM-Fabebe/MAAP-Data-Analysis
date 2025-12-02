@@ -22,7 +22,7 @@ cat('Beginning downstream analysis ....\n')
 
 #create an analysis dataframe
 #for glass options
-spec_options <- read_excel('amr_resources/list_glass_2.xlsx', sheet = 'whonet_spec_codes')
+spec_options <- readxl::read_excel('amr_resources/list_glass_2.xlsx', sheet = 'whonet_spec_codes')
 
 
 
@@ -476,7 +476,7 @@ for (y in unique(data_yrs$yr)) {
 
 
 ##GLASS calculations
-glass_opts <- read_excel('amr_resources/list_glass_2.xlsx') %>%
+glass_opts <- readxl::read_excel('amr_resources/list_glass_2.xlsx') %>%
   mutate(mo_organism=as.mo(pathogen),
          antibiotic=as.ab(antibiotic),
          rec_combo=paste0(mo_organism,specimen,antibiotic))
