@@ -131,7 +131,7 @@ sir_outcomes_df <- tmp %>%
 
   dplyr::filter(intrinsic_res_status=='FALSE') %>%   #drop the intrinsically resistant bug-drugs to not skew results
 
-  dplyr::filter(breakpoints_available==1) %>% ##select  only valid tests even if SIRs are provided by the user
+  dplyr::filter(breakpoints_available>0) %>% ##select  only valid tests even if SIRs are provided by the user
 
   dplyr::filter(interpreted_res!='NA') %>%   #drop the UNINTERPRETABLE COMBOS FROM GUIDELINES
 
@@ -139,11 +139,11 @@ sir_outcomes_df <- tmp %>%
 
   distinct(r_id, uid, organism,ab, .keep_all = T)
 
-excluded_rec <- bind_rows(amr_con, amr_sir) %>%
+excluded_rec <- tmp %>%
 
-  dplyr::filter(intrinsic_res_status=='TRUE'| interpreted_res=='NA')
+  dplyr::filter(intrinsic_res_status=='TRUE'| interpreted_res=='NA'| breakpoints_available<1)
 } else {
-  amc2 <- NULL
+  sir_outcomes_df <- NULL
 }
 # get organism full names
 
@@ -170,10 +170,17 @@ sir_outcomes_df_wide <- sir_outcomes_df %>%
 
 #set up location lookup
 #Use frequency by other AMU variables
-amr_vars_1 <- c('Sex', 'specimen_type','location_type')
+amr_vars_1 <- c('Sex', 'specimen_type'='Specimen type','location_type'='Patient Location Type')
+
+analysis_vars <- lkp_facility %>%
+  left_join(lkp_demographics, by='r_id') %>%
+  left_join(lkp_specimens, by='r_id')
 
 
-analysis_options <- sir_outcomes_df_wide %>% select(amr_vars_1) %>% summarise(across(everything(), ~ list(unique(.x)))) %>%
+
+analysis_options <- analysis_vars %>%
+  dplyr::select(all_of(amr_vars_1)) %>%
+  summarise(across(everything(), ~ list(unique(.x)))) %>%
   pivot_longer(everything(),
                names_to = "variables_for_analysis",
                values_to = "options_in_dataset") %>%

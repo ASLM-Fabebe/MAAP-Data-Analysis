@@ -1,3 +1,44 @@
+
+
+#
+# name_loc <- lkp_facility %>% left_join(patient_loc_updates %>% rename(location_type=options),
+#                            by=c('Patient Location Type'='my_dataset')) %>%
+#   dplyr::select(r_id,location_type)
+
+# Start the downstream analysis -------------------------------------------
+
+message('Beginning downstream analysis ....')
+cat('Beginning downstream analysis ....\n')
+
+# Please note Rates are only shown when n >=30 according to GLASS reccommendations
+
+#create an analysis dataframe
+#for glass options
+spec_options <- readxl::read_excel('amr_resources/list_glass_2.xlsx', sheet = 'whonet_spec_codes')
+
+
+
+an_df <- sir_outcomes_df_wide %>%
+  left_join(lkp_demographics %>% dplyr::select(Age, Sex,r_id), by='r_id') %>%
+  left_join(lkp_facility %>% dplyr::select(`Laboratory Name`,r_id, location_type=`Patient Location Type`), by='r_id') %>%
+  ##cleanung Age cols
+  mutate(Age_s=toupper(gsub("[[:digit:]]", "", Age)),
+         Age_n= as.numeric(gsub("[^0-9.-]", "", Age)),
+         Age_conv=ifelse(Age_s=='D',round(Age_n/365,0),
+                         ifelse(Age_s=='W',round(Age_n/7,0),
+                                ifelse(Age_s=='M',round(Age_n/12,0),
+                                       ifelse(Age_s=='Y',round(Age_n/1,0),Age)))),
+         Age_conv=as.numeric(Age_conv),
+         Age_g=as.character(age_groups(Age_conv, split_at = c(1,5,20,50,65))),
+         Age_g=ifelse(Age_g=='0', '<1',Age_g),
+         Age_g=factor(Age_g, levels=c('<1','1-4','5-19', '20-49','50-64','65+')),
+         Sex =str_to_title(Sex),
+         specimen_type=tolower(specimen_type)) %>%
+  left_join(spec_options, by=c('specimen_type'='Spec_Type_code')) %>%
+  mutate(specimen_type=ifelse(!is.na(Spec_name), Spec_name, specimen_type),
+         specimen_type=tolower(specimen_type)) %>%
+  distinct(uid, `Laboratory Name`, specimen_date, specimen_type, organism, .keep_all = T)
+
 #updating the entries
 
 #read in the user-validated file
@@ -20,49 +61,9 @@ for (i in analysis_options$id) {
   col_opt=analysis_options$options_in_dataset[analysis_options$id==i]
   user_opt=analysis_options$user_standardized_options[analysis_options$id==i]
 
-  sir_outcomes_df_wide[[paste0(col_var)]][sir_outcomes_df_wide[[paste0(col_var)]]==paste0(col_opt)]=paste0(user_opt)
+  an_df[[paste0(col_var)]][an_df[[paste0(col_var)]]==paste0(col_opt)]=paste0(user_opt)
 
 }
-
-#
-# name_loc <- lkp_facility %>% left_join(patient_loc_updates %>% rename(location_type=options),
-#                            by=c('Patient Location Type'='my_dataset')) %>%
-#   dplyr::select(r_id,location_type)
-
-# Start the downstream analysis -------------------------------------------
-
-message('Beginning downstream analysis ....')
-cat('Beginning downstream analysis ....\n')
-
-# Please note Rates are only shown when n >=30 according to GLASS reccommendations
-
-#create an analysis dataframe
-#for glass options
-spec_options <- readxl::read_excel('amr_resources/list_glass_2.xlsx', sheet = 'whonet_spec_codes')
-
-
-
-an_df <- sir_outcomes_df_wide %>%
-  left_join(lkp_demographics %>% dplyr::select(Age, Sex,r_id), by='r_id') %>%
-  left_join(lkp_facility %>% dplyr::select(`Laboratory Name`,r_id), by='r_id') %>%
-  ##cleanung Age cols
-  mutate(Age_s=toupper(gsub("[[:digit:]]", "", Age)),
-         Age_n= as.numeric(gsub("[^0-9.-]", "", Age)),
-         Age_conv=ifelse(Age_s=='D',round(Age_n/365,0),
-                         ifelse(Age_s=='W',round(Age_n/7,0),
-                                ifelse(Age_s=='M',round(Age_n/12,0),
-                                       ifelse(Age_s=='Y',round(Age_n/1,0),Age)))),
-         Age_conv=as.numeric(Age_conv),
-         Age_g=as.character(age_groups(Age_conv, split_at = c(1,5,20,50,65))),
-         Age_g=ifelse(Age_g=='0', '<1',Age_g),
-         Age_g=factor(Age_g, levels=c('<1','1-4','5-19', '20-49','50-64','65+')),
-         Sex =str_to_title(Sex),
-         specimen_type=tolower(specimen_type)) %>%
-  left_join(spec_options, by=c('specimen_type'='Spec_Type_code')) %>%
-  mutate(specimen_type=ifelse(!is.na(Spec_name), Spec_name, specimen_type),
-         specimen_type=tolower(specimen_type)) %>%
-  distinct(uid, `Laboratory Name`, specimen_date, specimen_type, organism, .keep_all = T)
-
 
 ##Saving the interpreted file
 openxlsx::write.xlsx(an_df,file = paste0(cntry,"/Results_AMR/Interpreted.results.",date_var,".xlsx"))
@@ -103,14 +104,6 @@ openxlsx::write.xlsx(lkp_demographics,file = paste0(cntry,"/Results_AMR/Demograp
 openxlsx::write.xlsx(lkp_facility,file = paste0(cntry,"/Results_AMR/Facilities.",date_var,".xlsx"))
 openxlsx::write.xlsx(sir_outcomes_df_wide,file = paste0(cntry,"/Results_AMR/AST.results.",date_var,".xlsx"))
 openxlsx::write.xlsx(excluded_rec,file = paste0(cntry,"/Results_AMR/Intrinsic.noguidelines.results.",date_var,".xlsx"))
-
-
-#openxlsx::write.xlsx(lkp_organisms,file = paste0("Organisms.",date_var,".xlsx"))
-#openxlsx::write.xlsx(lkp_demographics,file = paste0("Demographics.",date_var,".xlsx"))
-#openxlsx::write.xlsx(lkp_facility,file = paste0("Facilities.",date_var,".xlsx"))
-#openxlsx::write.xlsx(sir_outcomes_df_wide,file = paste0("AST.results.",date_var,".xlsx"))
-#openxlsx::write.xlsx(excluded_rec,file = paste0("Intrinsic.noguidelines.results.",date_var,".xlsx"))
-
 
 
 # Get bug-drug combinations  ----------------------------------------------
@@ -169,7 +162,7 @@ if (exists("priority_bact_pathogens")) {
     "Mycobacterium tuberculosis"
   )
 
-  priority_bact_pathogens_grp <- c("Citrobacter",
+  priority_bact_pathogens_grp <- c("Citrobacter",'Acinetobacter',
                                    "Enterobacter","Morganella","Salmonella",
                                    "Proteus","Serratia",
                                    "Shigella","Campylobacter")
