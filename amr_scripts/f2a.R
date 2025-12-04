@@ -1,17 +1,33 @@
-##Update Patient location information
-file_path <- file.path(amr_updates_dir,"patient_location_type.xlsx")
+#updating the entries
+
+#read in the user-validated file
+file_path <- file.path(amr_updates_dir,'user_standardized_options.xlsx')
 
 if (file.exists(file_path)) {
- patient_loc_updates <- read.xlsx(file_path)%>% filter(!is.na(options))  # or read.csv, fread, etc.
+  analysis_options <- read.xlsx(file_path)  # or read.csv, fread, etc.
 } else {
-  patient_loc_updates=loc_options%>% filter(!is.na(options))
-  message("File not found — matching_GLASS_specimen_types.xlsx")
+  analysis_options=analysis_options
+  cat("File not found — keeping existing lookup_df\n")
+}
+
+##integrate user defined options into the dataset
+analysis_options <- analysis_options %>% filter(!is.na(user_standardized_options)) %>%
+  mutate(id=paste0(row.names(.),variables_for_analysis))
+
+
+for (i in analysis_options$id) {
+  col_var=analysis_options$variables_for_analysis[analysis_options$id==i]
+  col_opt=analysis_options$options_in_dataset[analysis_options$id==i]
+  user_opt=analysis_options$user_standardized_options[analysis_options$id==i]
+
+  sir_outcomes_df_wide[[paste0(col_var)]][sir_outcomes_df_wide[[paste0(col_var)]]==paste0(col_opt)]=paste0(user_opt)
+
 }
 
 #
-name_loc <- lkp_facility %>% left_join(patient_loc_updates %>% rename(location_type=options),
-                           by=c('Patient Location Type'='my_dataset')) %>%
-  dplyr::select(r_id,location_type)
+# name_loc <- lkp_facility %>% left_join(patient_loc_updates %>% rename(location_type=options),
+#                            by=c('Patient Location Type'='my_dataset')) %>%
+#   dplyr::select(r_id,location_type)
 
 # Start the downstream analysis -------------------------------------------
 
@@ -77,7 +93,7 @@ an_df_long <- an_df %>%
   left_join(ab_class_list, by='ab', relationship = "many-to-many") %>%
   dplyr::select(-ab_selector, -X) %>%
   mutate(ab_class=ifelse(is.na(ab_class), ab_group(ab), ab_class)) %>%   #if class is not in the current list, source it
-  distinct() %>% left_join(name_loc, by='r_id')
+  distinct() #%>% left_join(name_loc, by='r_id')
 
 
 # Write data to file ------------------------------------------------------

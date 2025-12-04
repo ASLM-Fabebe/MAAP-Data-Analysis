@@ -32,6 +32,8 @@ convert2sir_fun <- function(df, n_cores = detectCores() - 1) {
     test <- sub_df[["test_type"]]
     guideline <- sub_df[["guideline"]]
     value <- suppressWarnings(as.numeric(sub_df[["vals"]]))
+    as_m=1
+    as_d=1
 
     if (test == "mic") {
       if (is.na(value)) {
@@ -39,6 +41,7 @@ convert2sir_fun <- function(df, n_cores = detectCores() - 1) {
         interpreted <- as.character(as.sir(value, mo = bacteria, guideline = guideline, ab = drug_code))
       } else {
         interpreted <- as.character(as.sir(as.mic(value), mo = bacteria, guideline = guideline, ab = drug_code))
+        as_m <- as.character(as.sir(as.mic(3), mo = bacteria, guideline = guideline, ab = drug_code))
       }
     } else {
       if (is.na(value)) {
@@ -46,13 +49,21 @@ convert2sir_fun <- function(df, n_cores = detectCores() - 1) {
         interpreted <- as.sir(value, mo = bacteria, guideline = guideline, ab = drug_code)
       } else {
         interpreted <- as.sir(as.disk(value), mo = bacteria, guideline = guideline, ab = drug_code)
+        as_d <- as.character(as.sir(as.disk(3), mo = bacteria, guideline = guideline, ab = drug_code))
       }
     }
 
     intrinsic_status <- as.character(mo_is_intrinsic_resistant(bacteria, ab = drug_code))
+    #"functions_01_line52
+
+
+    if(as.integer(any(!is.na(c(as_m,as_d))))>0){as_x=1}else{as_x=0}
+
 
     sub_df[["interpreted_res"]] <- as.character(interpreted)
     sub_df[["intrinsic_res_status"]] <- intrinsic_status
+    sub_df[["breakpoints_available"]] <- as_x
+
 
     sub_df
   })

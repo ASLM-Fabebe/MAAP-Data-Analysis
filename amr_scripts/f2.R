@@ -131,6 +131,8 @@ sir_outcomes_df <- tmp %>%
 
   dplyr::filter(intrinsic_res_status=='FALSE') %>%   #drop the intrinsically resistant bug-drugs to not skew results
 
+  dplyr::filter(breakpoints_available==1) %>% ##select  only valid tests even if SIRs are provided by the user
+
   dplyr::filter(interpreted_res!='NA') %>%   #drop the UNINTERPRETABLE COMBOS FROM GUIDELINES
 
   arrange(interpreted_res) %>%
@@ -167,9 +169,21 @@ sir_outcomes_df_wide <- sir_outcomes_df %>%
 
 
 #set up location lookup
-loc_opts <- c('Inpatient','Outpatient','ICU or Critical care', 'Other')
+#Use frequency by other AMU variables
+amr_vars_1 <- c('Sex', 'specimen_type','location_type')
 
-loc_options=data.frame(my_dataset=unique(lkp_facility$`Patient Location Type`), options=c(rep('', length(unique(lkp_facility$`Patient Location Type`)))))
+
+analysis_options <- sir_outcomes_df_wide %>% select(amr_vars_1) %>% summarise(across(everything(), ~ list(unique(.x)))) %>%
+  pivot_longer(everything(),
+               names_to = "variables_for_analysis",
+               values_to = "options_in_dataset") %>%
+  unnest(options_in_dataset) %>%
+  mutate(user_standardized_options='')
+
+
+#loc_opts <- c('Inpatient','Outpatient','ICU or Critical care', 'Other')
+
+#loc_options=data.frame(my_dataset=unique(lkp_facility$`Patient Location Type`), options=c(rep('', length(unique(lkp_facility$`Patient Location Type`)))))
 
 #setup specimen lookup
 #

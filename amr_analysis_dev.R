@@ -162,7 +162,7 @@ ui <- fluidPage(
     #Step4
     tabPanel("Step 4",
              #run script 1b
-             h4("Update patient location entries and Begin Analysis"),
+             h4("Standardize the options in these variables and Begin Analysis"),
              rHandsontableOutput("table_4"),
              br(),
 
@@ -408,17 +408,16 @@ server <- function(input, output, session) {
   observeEvent(input$next_3, {
     if(isTRUE(input$completed_3)) {
       updateTabsetPanel(session, "steps", "Step 4")
-      step4_data(loc_options)  # Load only now
+      # Load step4 data only now
+      step4_data(analysis_options)
     }
   })
-
-
   output$table_4 <- renderRHandsontable({
     df <- step4_data()
     req(df)
     rhandsontable(df) %>%
-      hot_col("my_dataset", readOnly = TRUE, width = 200) %>%
-      hot_col("options", type = "dropdown", source = c(loc_opts,'Not available'), width = 200)
+      hot_col("variables_for_analysis", readOnly = TRUE, width = 300) %>%
+      hot_col("options_in_dataset", readOnly = TRUE, width = 150)  # Optional: Make label column readonly
   })
 
 
@@ -429,7 +428,7 @@ server <- function(input, output, session) {
     }
   })
 
-  output$download_4 <- downloadHandler(filename = "patient_location_type.xlsx",
+  output$download_4 <- downloadHandler(filename = "user_standardized_options.xlsx",
                                        content = function(file) writexl::write_xlsx(step4_data(), file))
 
 
