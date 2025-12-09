@@ -10,8 +10,10 @@ if (file.exists(file_path)) {
 }
 
 ##integrate user defined options into the dataset
-analysis_options <- analysis_options %>% filter(!is.na(user_standardized_options)) %>%
-  mutate(id=paste0(row.names(.),variables_for_analysis))
+analysis_options <- analysis_options %>%
+  filter(!is.na(user_standardized_options)) %>%
+  mutate(user_standardized_options=ifelse(tolower(user_standardized_options)=='unknown', NA,user_standardized_options),
+         id=paste0(row.names(.),variables_for_analysis))
 
 
 for (i in analysis_options$id) {
@@ -44,7 +46,7 @@ facility_prev_amu <- amu_prev_meta %>%
 
 
 if (nrow(facility_prev_amu)>0) {
-overall_fac_plot <- ggplot(facility_prev_amu, aes(x = reorder(facility, -prev), y = prev, group = as.factor(year) )) +
+p1 <- ggplot(facility_prev_amu, aes(x = reorder(facility, -prev), y = prev, group = as.factor(year) )) +
   geom_col(width=.9, aes(fill = as.factor(year)))+  # Moved fill outside aes()
   labs(
     title = "Percentage of AMU across all facilities",
@@ -67,7 +69,7 @@ overall_fac_plot <- ggplot(facility_prev_amu, aes(x = reorder(facility, -prev), 
         axis.text.y = element_blank())
 }
 
-ggsave(filename = paste0(amu_dir,"/1AMU_by_facility.png"), plot = overall_fac_plot, width = 6, height = 6, dpi = 300)
+ggsave(filename = paste0(amu_dir,"/1AMU_by_facility.png"), plot = p1, width = 6, height = 6, dpi = 300)
 
 
 

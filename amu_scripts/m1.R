@@ -89,5 +89,7 @@ empty_amu_df <- data.frame(required_variables=cols,
 #create a folder to hold the temporary files
 amu_updates_dir <- file.path(folder_path, "analysis_updates")
 
+if(!dir.exists(amu_updates_dir)){dir.create(amu_updates_dir, recursive = T)}
+
 #load_resources
 source('amu_scripts/m1a.R')
