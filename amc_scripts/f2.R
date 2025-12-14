@@ -24,7 +24,7 @@ unavailable_cols=cols_to_update$Required_variables[cols_to_update$Corresponding_
 
 amc_raw[unavailable_cols]=NA
 
-if('date' %in% unavailable_cols) {amr$`date`=user_added_date }else{amr$`date`=amr$`date`} #fixes the lack od date column
+if('date' %in% unavailable_cols) {amc_raw$`date`=user_added_date }else{amc_raw$`date`=amc_raw$`date`} #fixes the lack of date column
 
 
 #adding the is.na
